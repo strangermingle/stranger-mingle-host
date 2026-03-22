@@ -26,16 +26,4 @@ export const ROUTES = {
     PROMO_CODES: '/host-dashboard/promo-codes',
     BECOME_HOST: '/become-host',
   },
-  ADMIN: {
-    DASHBOARD: '/admin/admin-dashboard',
-    ANALYTICS: '/admin/analytics',
-    EVENTS: '/admin/events',
-    USERS: '/admin/users',
-    REPORTS: '/admin/reports',
-    PAYOUTS: '/admin/payouts',
-    AUDIT_LOGS: '/admin/audit-logs',
-    FEATURED: '/admin/featured',
-    CATEGORIES: '/admin/categories',
-    CONFIG: '/admin/config',
-  },
 };

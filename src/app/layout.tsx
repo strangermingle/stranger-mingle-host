@@ -17,46 +17,15 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Stranger Mingle — Discover Events & Experiences Near You",
-    template: "%s | Stranger Mingle"
-  },
-  description: "Join India's most active community for weekend stranger meetups and local events. Stranger Mingle is a brand of Salty Media Product (opc) Pvt Ltd.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://host.strangermingle.com'),
-  keywords: "weekend events, standup comedy showsstranger meetups, weekend events, make friends, offline meetups, india events, Pune events, Bangalore events, Mumbai events",
-  alternates: {
-    canonical: '/',
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'en_IN',
-    siteName: 'Stranger Mingle',
-    title: 'Stranger Mingle - Stranger Meetups & Local Events for Making New Friends',
-    description: "Join India's most active community for weekend stranger meetups and local events. Make new friends instantly through safe, curated offline experiences.",
-    images: [
-      {
-        url: "/images/og-images/og-image-default.webp",
-        width: 1200,
-        height: 630,
-        alt: "Stranger Mingle - Weekend Social Meetups & Events",
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Stranger Mingle - Stranger Meetups & Local Events for Making New Friends',
-    description: "Join India's most active community for weekend Stranger Meetups to make new friends instantly.",
-    images: ["/images/og-images/og-image-default.webp"],
-    creator: '@strangermingleindia',
+    default: "Stranger Mingle — Host Dashboard",
+    template: "%s | Stranger Mingle Host"
   },
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
     googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      index: false,
+      follow: false,
     },
   },
   icons: {
@@ -99,25 +68,6 @@ export default function RootLayout({
         )}
         <GoogleTagManager />
         {children}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              "name": "Stranger Mingle",
-              "url": process.env.NEXT_PUBLIC_SITE_URL || "https://host.strangermingle.com",
-              "logo": `${process.env.NEXT_PUBLIC_SITE_URL || "https://host.strangermingle.com"}/logo.png`,
-              "sameAs": [
-                "https://www.instagram.com/strangermingleindia/",
-                "https://www.youtube.com/@strangermingleindia",
-                "https://www.reddit.com/user/StrangerMingleIndia/",
-                "https://www.facebook.com/strangermingleevents"
-              ]
-            }),
-          }}
-        />
-        <ConsentBanner />
       </body>
     </html>
   );

@@ -5,13 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getEventBySlug } from '@/lib/repositories/events.repository'
 import { EventDetailHero } from '@/components/events/EventDetailHero'
 import { MapPinIcon, GlobeIcon, ClockIcon } from 'lucide-react'
-import { generateEventMetadata } from '@/lib/metadata'
 import ShareButtons from '@/components/events/ShareButtons'
-import { EventDiscussions } from '@/components/events/EventDiscussions'
-import { EventReviews } from '@/components/events/EventReviews'
-import { getRelatedEvents } from '@/lib/repositories/events.repository'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { TicketSection } from '@/components/events/TicketSection'
 import ClientSideModalHandler from '@/components/events/ClientSideModalHandler'
 
 interface PageProps {
@@ -27,7 +22,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return { title: 'Event Not Found' }
   }
 
-  return generateEventMetadata(event)
+  return {
+    title: event.title,
+    robots: { index: false, follow: false }
+  }
 }
 
 export const dynamic = 'force-dynamic'
@@ -112,43 +110,23 @@ export default async function EventDetailPage(props: PageProps) {
     { data: agenda },
     { data: faqs },
     { data: host },
-    { data: discussionsData },
-    { data: reviewsData },
     { data: followData },
     { data: bookingData },
     { data: likeData },
     { data: saveData },
     { data: interestData },
-    relatedEventsData,
   ] = await Promise.all([
     (supabase.from('ticket_tiers') as any).select('*').eq('event_id', event.id).eq('is_active', true).order('price'),
     (supabase.from('event_images') as any).select('*').eq('event_id', event.id).order('sort_order'),
     (supabase.from('event_agenda') as any).select('*').eq('event_id', event.id).order('sort_order'),
     (supabase.from('event_faqs') as any).select('*').eq('event_id', event.id).order('sort_order'),
     (supabase.from('host_profiles') as any).select('*').eq('id', event.host_id).single(),
-    (supabase.from('event_discussions') as any).select('*, user:users(username, avatar_url, anonymous_alias)').eq('event_id', event.id).order('created_at', { ascending: true }),
-    (supabase.from('event_reviews') as any).select('*, user:users(username, avatar_url), review_helpful_votes(id)').eq('event_id', event.id).eq('is_approved', true).order('created_at', { ascending: false }),
     user ? (supabase.from('host_follows') as any).select('id').eq('follower_id', user.id).eq('host_id', event.host_id).maybeSingle() : Promise.resolve({ data: null }),
     user ? (supabase.from('bookings') as any).select('id').eq('user_id', user.id).eq('event_id', event.id).eq('status', 'confirmed').maybeSingle() : Promise.resolve({ data: null }),
     user ? (supabase.from('event_likes') as any).select('id').eq('user_id', user.id).eq('event_id', event.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? (supabase.from('event_saves') as any).select('id').eq('user_id', user.id).eq('event_id', event.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? (supabase.from('event_interests') as any).select('id').eq('user_id', user.id).eq('event_id', event.id).maybeSingle() : Promise.resolve({ data: null }),
-    getRelatedEvents(event.id, event.city || '')
   ])
-
-  const relatedEvents = (relatedEventsData as any) || []
-
-  const discussions = (discussionsData || []).map((d: any) => ({
-    ...d,
-    user: d.user || { username: 'Unknown', avatar_url: null, anonymous_alias: 'Ghost' }
-  }))
-
-  const reviews = (reviewsData || []).map((r: any) => ({
-    ...r,
-    user: r.user || { username: 'Anonymous', avatar_url: null },
-    helpful_count: r.review_helpful_votes?.length || 0,
-    is_verified_attendee: !!r.booking_id
-  }))
 
   const isFollowing = !!followData?.id
   const hasBooking = bookingData?.id
@@ -189,25 +167,7 @@ export default async function EventDetailPage(props: PageProps) {
       name: host?.organisation_name || host?.display_name || event.host_display_name || 'Stranger Mingle',
       url: `${process.env.NEXT_PUBLIC_SITE_URL}/hosts/${host?.slug || (event as any).host_username || ''}`
     },
-    offers: (ticketTiers || []).map((tier: any) => ({
-      '@type': 'Offer',
-      name: tier.name,
-      price: tier.price,
-      priceCurrency: tier.currency || 'INR',
-      availability: tier.sold_count < tier.total_quantity ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      url: `${process.env.NEXT_PUBLIC_SITE_URL}/events/${event.slug}#tickets-section`,
-      validFrom: tier.sale_start_at || event.created_at
-    })),
     isAccessibleForFree: minPrice === 0,
-    ...(reviews.length > 0 && {
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: (event as any).rating_avg || 4.5,
-        reviewCount: (event as any).rating_count || reviews.length,
-        bestRating: 5,
-        worstRating: 1
-      }
-    })
   }
 
   // FAQ Schema
@@ -271,21 +231,20 @@ export default async function EventDetailPage(props: PageProps) {
         event={event} 
         hostProfile={host} 
         hostUser={(event as any).host}
-        isFollowing={isFollowing}
-        isLiked={isLiked}
-        isSaved={isSaved}
-        isInterested={isInterested}
+        isFollowing={!!followData?.id}
+        isLiked={!!likeData?.id}
+        isSaved={!!saveData?.id}
+        isInterested={!!interestData?.id}
         minPrice={minPrice}
       />
 
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="space-y-12">
             {/* Ticket Selection Section (Requirement 7) */}
-            <TicketSection 
-              eventId={event.id} 
-              ticketTiers={ticketTiers || []} 
-              slug={event.slug} 
-            />
+            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 text-center">
+              <p className="text-indigo-900 font-black uppercase tracking-tight text-sm">Booking is currently disabled on this platform.</p>
+              <p className="text-indigo-600 font-bold text-xs mt-1 uppercase tracking-widest">This is a management dashboard preview.</p>
+            </div>
 
             <hr className="border-gray-100" />
 
@@ -379,27 +338,7 @@ export default async function EventDetailPage(props: PageProps) {
 
             <hr className="border-gray-100" />
 
-            {/* Reviews Preview */}
-            <section aria-labelledby="reviews-heading">
-              <h2 id="reviews-heading" className="text-2xl font-bold text-gray-900 mb-6">Attendee Reviews</h2>
-              <EventReviews 
-                  eventId={event.id} 
-                  initialReviews={reviews} 
-                  hasBooking={null}
-              />
-            </section>
-
-            <hr className="border-gray-100" />
-
-            {/* Discussion Preview */}
-            <section aria-labelledby="discussions-heading">
-              <h2 id="discussions-heading" className="text-2xl font-bold text-gray-900 mb-6">Event Discussion</h2>
-              <EventDiscussions 
-                eventId={event.id} 
-                initialDiscussions={discussions} 
-                currentUserId={user?.id}
-              />
-            </section>
+            {/* Reviews and Discussions REMOVED FOR HOST-ONLY */}
         </div>
       </main>
     </article>

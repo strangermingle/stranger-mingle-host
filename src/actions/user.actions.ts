@@ -22,8 +22,8 @@ export async function updateProfileAction(formData: FormData) {
     return { error: 'Username must be between 3 and 50 characters' }
   }
 
-  if (role && !['member', 'host'].includes(role)) {
-    return { error: 'Invalid role selected' }
+  if (role && role !== 'host') {
+    return { error: 'Invalid role selected. Only Host role is supported.' }
   }
 
   const supabase = await createClient()

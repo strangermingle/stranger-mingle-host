@@ -6,6 +6,7 @@ import { updateHostPageAction } from '@/actions/host.actions'
 import { uploadImageAction, deleteImageAction } from '@/actions/event.actions'
 import { Button, Input, Textarea } from '@/components/ui'
 import { toast } from 'sonner'
+import { sendGAEvent } from '@/lib/gtag'
 import { 
   User, 
   MapPin, 
@@ -88,6 +89,12 @@ export default function HostProfileForm({ initialData }: { initialData: any }) {
     if (result.error) {
       toast.error(result.error)
     } else {
+      sendGAEvent({
+        action: 'form_submit',
+        category: 'engagement',
+        label: 'host_profile_update',
+        host_id: initialData.id
+      })
       toast.success('Profile updated successfully')
       router.refresh()
     }

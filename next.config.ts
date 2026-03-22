@@ -32,12 +32,7 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    return [
-      {
-        source: '/sitemap-events.xml',
-        destination: '/sitemap-events',
-      },
-    ];
+    return [];
   },
   async redirects() {
     return [];

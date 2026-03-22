@@ -91,8 +91,6 @@ export async function sendNotification(
 
     if (emailError) {
       console.error('[NotificationSystem] Failed to queue email notification record', emailError);
-    } else {
-      console.log(`[NotificationSystem] Email delivery record created for ${user.email} (Type: ${type})`);
     }
   }
 

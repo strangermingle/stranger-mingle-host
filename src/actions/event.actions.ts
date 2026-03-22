@@ -596,14 +596,78 @@ export async function verifyEventFeePaymentAction(eventId: string, paymentDetail
       status: 'published' 
     })
     .eq('id', eventId)
+ 
+   if (updateError) {
+     console.error('Failed to update event fee status', updateError)
+     return { error: 'Failed to publish event. Please contact support.' }
+   }
+ 
+   revalidatePath('/host-dashboard')
 
-  if (updateError) {
-    console.error('Failed to update event fee status', updateError)
-    return { error: 'Failed to publish event. Please contact support.' }
-  }
+   // Trigger Confirmation Email to Host
+   try {
+     const { data: eventData } = await supabase
+       .from('events')
+       .select(`
+         title,
+         host_id
+       `)
+       .eq('id', eventId)
+       .single()
 
-  revalidatePath('/host-dashboard')
-  return { success: true }
+     if (eventData) {
+       const { data: hostProfile } = await supabase
+         .from('host_profiles')
+         .select('user_id')
+         .eq('id', eventData.host_id)
+         .single()
+
+       if (hostProfile) {
+         const { data: hostUser } = await supabase
+           .from('users')
+           .select('email, username')
+           .eq('id', hostProfile.user_id)
+           .single()
+
+         if (hostUser?.email) {
+           const baseUrl = env.NEXT_PUBLIC_SUPABASE_URL
+           const functionUrl = `${baseUrl}/functions/v1/send-email`
+           
+           const emailPayload = {
+             recipient_email: hostUser.email,
+             user_id: hostProfile.user_id,
+             subject: 'Event Published Successfully! — Stranger Mingle',
+             body: `Great news! Your event <strong>${eventData.title}</strong> is now live. We've received your payment of ₹199.<br><br>Manage your event, track attendees, and more from your Host Dashboard.`,
+             action_url: `${env.NEXT_PUBLIC_SITE_URL}/host-dashboard/events`,
+             meta_data: {
+               total: 199,
+               ref: paymentDetails.razorpay_payment_id,
+               items: [
+                 {
+                   name: 'Event Creation Fee',
+                   quantity: 1,
+                   price: '199.00'
+                 }
+               ]
+             }
+           }
+
+           await fetch(functionUrl, {
+             method: 'POST',
+             headers: {
+               'Content-Type': 'application/json',
+               'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
+             },
+             body: JSON.stringify(emailPayload)
+           })
+         }
+       }
+     }
+   } catch (emailErr) {
+     console.error('Failed to trigger host confirmation email:', emailErr)
+   }
+
+   return { success: true }
 }
 
 export async function getEventDetailsAction(eventId: string) {

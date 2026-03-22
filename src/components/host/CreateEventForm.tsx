@@ -8,6 +8,7 @@ import { mapPostgresError } from '@/lib/utils/error-mapper'
 import Script from 'next/script'
 import { toast } from 'sonner'
 import { Camera, X } from 'lucide-react'
+import { sendGAEvent } from '@/lib/gtag'
 interface Category {
   id: string
   name: string
@@ -189,6 +190,12 @@ export function CreateEventForm({ categories, pageId }: CreateEventFormProps) {
        }
        
        if (status === 'draft') {
+         sendGAEvent({
+            action: 'form_submit',
+            category: 'engagement',
+            label: 'event_draft_save',
+            event_title: formData.title
+         })
          router.push(`/host-dashboard/${pageId}/events?success=${res?.slug || ''}`)
          return
        }
@@ -215,6 +222,20 @@ export function CreateEventForm({ categories, pageId }: CreateEventFormProps) {
                toast.error(verifyRes.error)
                router.push(`/host-dashboard/${pageId}/events`)
              } else {
+                sendGAEvent({
+                   action: 'purchase',
+                   category: 'ecommerce',
+                   label: 'event_publish_fee',
+                   value: 199,
+                   event_id: res.id,
+                   event_title: formData.title
+                })
+                sendGAEvent({
+                   action: 'event_creation',
+                   category: 'engagement',
+                   label: 'published',
+                   event_id: res.id
+                })
                toast.success("Event published successfully!")
                router.push(`/host-dashboard/${pageId}/events?success=${res.slug}`)
              }

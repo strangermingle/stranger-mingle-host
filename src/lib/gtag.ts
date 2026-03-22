@@ -13,7 +13,5 @@ export const sendGAEvent = ({ action, category, label, value, ...rest }: {
             value: value,
             ...rest
         });
-    } else {
-        console.log("GA4 Event:", { action, category, label, value, ...rest });
     }
 };

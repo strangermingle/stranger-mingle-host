@@ -17,19 +17,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Protect /admin/* routes
-  if (pathname.startsWith('/admin')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-
-    // Additional admin role check should be done on the layout or page level
-    // since we can't easily fetch user roles in edge middleware without an extra DB call,
-    // though if it's attached to user_metadata you could check `user.user_metadata.role` here.
-    // For now, redirecting to login if not authenticated is required.
-  }
-
-  // --- Proxy Logic from old proxy.ts ---
+  // --- Domain Logic ---
   const hostname = request.headers.get('host') || '';
   const isLocalhost = hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('0.0.0.0');
 
@@ -37,20 +25,15 @@ export async function proxy(request: NextRequest) {
     const host = hostname.split(':')[0];
     const ALLOWED_DOMAINS = [
       'host.strangermingle.com',
-      'strangermingle.com',
-      'host.strangermingle.com',
-      'admin.strangermingle.com'
+      'strangermingle.com'
     ];
 
-    // Redirect non-www to www ONLY for the main domain if that's still desired
-    // However, if we are on a subdomain, we should stay there.
     if (host === 'strangermingle.com') {
       const urlWithWww = request.nextUrl.clone();
       urlWithWww.host = 'host.strangermingle.com';
       return NextResponse.redirect(urlWithWww);
     }
 
-    // Allow the specified subdomains
     if (!ALLOWED_DOMAINS.includes(host)) {
       return new NextResponse(`Access Denied: This website is not accessible from ${host}`, {
         status: 403,
@@ -58,14 +41,12 @@ export async function proxy(request: NextRequest) {
       });
     }
 
-    // Force HTTPS in production
     if (request.nextUrl.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
       const httpsUrl = request.nextUrl.clone();
       httpsUrl.protocol = 'https:';
       return NextResponse.redirect(httpsUrl);
     }
   }
-  // -------------------------------------
 
   return supabaseResponse
 }
