@@ -206,19 +206,23 @@ export async function initiateBookingAction(input: CreateBookingInput): Promise<
     // g. Create Razorpay order
     const bookingRef = `SM-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     
-    const razorpayOrder = await createRazorpayOrder({
-      amount: Math.round(total_amount * 100), // convert to paise
-      currency: 'INR',
-      receipt: bookingRef
-    });
+    let razorpayOrderId = null;
+    if (total_amount > 0) {
+      const razorpayOrder = await createRazorpayOrder({
+        amount: Math.round(total_amount * 100), // convert to paise
+        currency: 'INR',
+        receipt: bookingRef
+      });
+      razorpayOrderId = razorpayOrder.id;
+    }
 
     const bookingData: any = {
       booking_ref: bookingRef,
       user_id: finalUserId,
       event_id: validated.event_id,
       promo_code_id: promoCodeId || null,
-      status: 'pending',
-      payment_status: 'unpaid',
+      status: total_amount > 0 ? 'pending' : 'confirmed',
+      payment_status: total_amount > 0 ? 'unpaid' : 'paid',
       subtotal,
       discount_amount: discountAmount,
       taxable_amount,
@@ -227,7 +231,7 @@ export async function initiateBookingAction(input: CreateBookingInput): Promise<
       total_amount,
       host_payout,
       currency: 'INR',
-      razorpay_order_id: razorpayOrder.id,
+      razorpay_order_id: razorpayOrderId,
       attendee_name: validated.attendee_name,
       attendee_email: validated.attendee_email,
       attendee_phone: validated.attendee_phone || null,
@@ -288,7 +292,7 @@ export async function initiateBookingAction(input: CreateBookingInput): Promise<
       data: {
         bookingId: booking.id,
         bookingRef: booking.booking_ref,
-        razorpayOrderId: razorpayOrder.id,
+        razorpayOrderId: razorpayOrderId || '',
         totalAmount: total_amount,
         keyId: env.NEXT_PUBLIC_RAZORPAY_KEY_ID
       }

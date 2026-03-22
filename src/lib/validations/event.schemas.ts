@@ -22,13 +22,13 @@ export const createEventSchema = z
       .optional(),
     location_id: z.string().uuid().optional(), // assuming if location selected from table
     location: z.object({
-      venue_name: z.string().optional().or(z.literal('')),
-      address_line_1: z.string().optional().or(z.literal('')),
-      city: z.string().optional().or(z.literal('')),
-      state: z.string().optional().or(z.literal('')),
-      country: z.string().optional().or(z.literal('')),
-      postal_code: z.string().optional().or(z.literal('')),
-    }).optional(),
+      venue_name: z.string().optional().nullable().or(z.literal('')),
+      address_line_1: z.string().optional().nullable().or(z.literal('')),
+      city: z.string().optional().nullable().or(z.literal('')),
+      state: z.string().optional().nullable().or(z.literal('')),
+      country: z.string().optional().nullable().or(z.literal('')),
+      postal_code: z.string().optional().nullable().or(z.literal('')),
+    }).optional().nullable(),
     online_event_url: z
       .string()
       .url('Please enter a valid URL')
@@ -137,13 +137,13 @@ const _baseEventSchema = z.object({
   short_description: z.string().max(500).optional(),
   location_id: z.string().uuid().optional(),
   location: z.object({
-    venue_name: z.string().optional(),
-    address_line_1: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    country: z.string().optional(),
-    postal_code: z.string().optional(),
-  }).optional(),
+    venue_name: z.string().optional().nullable(),
+    address_line_1: z.string().optional().nullable(),
+    city: z.string().optional().nullable(),
+    state: z.string().optional().nullable(),
+    country: z.string().optional().nullable(),
+    postal_code: z.string().optional().nullable(),
+  }).optional().nullable(),
   online_event_url: z.string().url().optional().or(z.literal('')),
   online_platform: z.string().optional(),
   online_url_reveal: z.string().optional(),

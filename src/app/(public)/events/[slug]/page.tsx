@@ -11,6 +11,8 @@ import { EventDiscussions } from '@/components/events/EventDiscussions'
 import { EventReviews } from '@/components/events/EventReviews'
 import { getRelatedEvents } from '@/lib/repositories/events.repository'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { TicketSection } from '@/components/events/TicketSection'
+import ClientSideModalHandler from '@/components/events/ClientSideModalHandler'
 
 interface PageProps {
   params: { slug: string }
@@ -261,6 +263,10 @@ export default async function EventDetailPage(props: PageProps) {
       {faqSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
+      {bookingForModal && (
+        <ClientSideModalHandler booking={bookingForModal} />
+      )}
+
       <EventDetailHero 
         event={event} 
         hostProfile={host} 
@@ -274,6 +280,15 @@ export default async function EventDetailPage(props: PageProps) {
 
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="space-y-12">
+            {/* Ticket Selection Section (Requirement 7) */}
+            <TicketSection 
+              eventId={event.id} 
+              ticketTiers={ticketTiers || []} 
+              slug={event.slug} 
+            />
+
+            <hr className="border-gray-100" />
+
             {/* About Section */}
             {(event.description || event.short_description) && (
               <section aria-labelledby="about-heading">
