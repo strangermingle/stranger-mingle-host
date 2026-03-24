@@ -23,7 +23,11 @@ export function CompactTicketScanner({ eventId }: CompactTicketScannerProps) {
     if (scanning && entryMode === 'camera' && !scannedTicket) {
       scannerRef.current = new Html5QrcodeScanner(
         'qr-reader',
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        { 
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
+          videoConstraints: { facingMode: "environment" }
+        },
         false
       )
 
