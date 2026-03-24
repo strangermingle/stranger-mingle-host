@@ -1,8 +1,20 @@
-export default function EventsAttendeesPage() {
+import { createClient } from '@/lib/supabase/server'
+import { AttendanceTab } from '@/components/members/AttendanceTab'
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Guest List — Stranger Mingle',
+  description: 'View and manage attendees for your events',
+}
+
+export default async function EventsAttendeesPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
   return (
-    <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
-      <h1 className="text-2xl font-black text-gray-900 mb-4">Events Attendees</h1>
-      <p className="text-gray-500">View and manage attendees for specific events.</p>
+    <div className="space-y-6">
+      <AttendanceTab userId={user.id} defaultMode="manual" />
     </div>
   )
 }

@@ -20,7 +20,7 @@ export const createEventSchema = z
       .string()
       .max(500, 'Short description must be 500 characters or less')
       .optional(),
-    location_id: z.string().uuid().optional(), // assuming if location selected from table
+    location_id: z.string().uuid('Invalid location selected').optional().or(z.literal('')),
     location: z.object({
       venue_name: z.string().optional().nullable().or(z.literal('')),
       address_line_1: z.string().optional().nullable().or(z.literal('')),
@@ -60,6 +60,10 @@ export const createEventSchema = z
     is_recurring: z.boolean().optional().default(false),
     recurrence_rule: z.string().optional(),
     status: z.enum(['draft', 'published', 'cancelled', 'completed']).optional().default('published'),
+    meta_title: z.string().max(70, 'Meta title should be 70 characters or less').optional().or(z.literal('')),
+    meta_description: z.string().max(160, 'Meta description should be 160 characters or less').optional().or(z.literal('')),
+    cover_image_alt: z.string().optional().or(z.literal('')),
+    vertical_poster_alt: z.string().optional().or(z.literal('')),
     ticket_tiers: z.array(
       z.object({
         name: z.string(),
@@ -135,7 +139,7 @@ const _baseEventSchema = z.object({
   vertical_poster_url: z.string().url(),
   description: z.string().optional(),
   short_description: z.string().max(500).optional(),
-  location_id: z.string().uuid().optional(),
+  location_id: z.string().uuid().optional().or(z.literal('')),
   location: z.object({
     venue_name: z.string().optional().nullable(),
     address_line_1: z.string().optional().nullable(),
@@ -157,6 +161,10 @@ const _baseEventSchema = z.object({
   is_recurring: z.boolean().optional().default(false),
   recurrence_rule: z.string().optional(),
   status: z.enum(['draft', 'published', 'cancelled', 'completed']).optional().default('published'),
+  meta_title: z.string().max(70).optional().or(z.literal('')),
+  meta_description: z.string().max(160).optional().or(z.literal('')),
+  cover_image_alt: z.string().optional().or(z.literal('')),
+  vertical_poster_alt: z.string().optional().or(z.literal('')),
   ticket_tiers: z.array(
     z.object({
       name: z.string(),

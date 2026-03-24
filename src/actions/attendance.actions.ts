@@ -13,6 +13,7 @@ type TicketWithDetails = Database['public']['Tables']['tickets']['Row'] & {
     attendee_phone: string | null
   } | null
   events: {
+    id: string
     title: string
     host_id: string
   } | null
@@ -30,7 +31,7 @@ export type TicketLookupResponse = {
  */
 export async function getTicketDetailsAction(
   identifier: string,
-  eventId: string,
+  eventId?: string | null,
   type: 'qr' | 'manual' = 'qr'
 ): Promise<TicketLookupResponse> {
   try {
@@ -76,32 +77,39 @@ export async function getTicketDetailsAction(
 
     const { data: ticket, error } = type === 'qr' 
       ? await query.eq('id', ticketId).single()
-      : await query.eq('ticket_number', identifier).eq('event_id', eventId).single()
+      : await query.eq('ticket_number', identifier).eq('event_id', eventId || '').single()
 
     if (error || !ticket) {
-      return { status: 'invalid', message: 'Ticket not found' }
+      return { status: 'invalid', message: eventId ? 'Ticket not found for this event' : 'Ticket not found' }
     }
 
     const typedTicket = ticket as unknown as TicketWithDetails
 
     // Verify host ownership (or co-host)
-    // For simplicity, checking primary host first. Co-host check can be added if needed.
-    if (typedTicket.events?.host_id !== user.id) {
-       // Check co-hosts
-       const { data: cohost } = await supabase
-        .from('event_cohosts')
-        .select('id')
-        .eq('event_id', typedTicket.event_id)
-        .eq('host_user_id', user.id)
-        .eq('is_confirmed', true)
+    if (typedTicket.events) {
+      const { data: hostProfile } = await supabase
+        .from('host_profiles')
+        .select('user_id')
+        .eq('id', typedTicket.events.host_id)
         .single()
 
-       if (!cohost) {
-         return { status: 'invalid', message: 'Unauthorized: You are not a host for this event' }
-       }
+      if (hostProfile?.user_id !== user.id) {
+        // Check co-hosts
+        const { data: cohost } = await supabase
+          .from('event_cohosts')
+          .select('id')
+          .eq('event_id', typedTicket.event_id)
+          .eq('host_user_id', user.id)
+          .eq('is_confirmed', true)
+          .single()
+
+        if (!cohost) {
+          return { status: 'invalid', message: 'Unauthorized: You are not a host for this event' }
+        }
+      }
     }
 
-    if (typedTicket.event_id !== eventId) {
+    if (eventId && typedTicket.event_id !== eventId) {
       return { status: 'invalid', message: 'This ticket is for a different event' }
     }
 
@@ -142,19 +150,27 @@ export async function getEventTicketsAction(eventId: string) {
       throw new Error('Event not found')
     }
 
-    if (event.host_id !== user.id) {
-       // Check co-hosts
-       const { data: cohost } = await supabase
-        .from('event_cohosts')
-        .select('id')
-        .eq('event_id', eventId)
-        .eq('host_user_id', user.id)
-        .eq('is_confirmed', true)
+    if (event.host_id) {
+      const { data: hostProfile } = await supabase
+        .from('host_profiles')
+        .select('user_id')
+        .eq('id', event.host_id)
         .single()
 
-       if (!cohost) {
-         throw new Error('Unauthorized: You are not a host for this event')
-       }
+      if (hostProfile?.user_id !== user.id) {
+        // Check co-hosts
+        const { data: cohost } = await supabase
+          .from('event_cohosts')
+          .select('id')
+          .eq('event_id', eventId)
+          .eq('host_user_id', user.id)
+          .eq('is_confirmed', true)
+          .single()
+
+        if (!cohost) {
+          throw new Error('Unauthorized: You are not a host for this event')
+        }
+      }
     }
 
     const { data: tickets, error } = await supabase
@@ -165,13 +181,14 @@ export async function getEventTicketsAction(eventId: string) {
         holder_name,
         is_checked_in,
         is_void,
+        event_id,
         bookings (
           attendee_name,
+          attendee_email,
           attendee_phone
         )
       `)
       .eq('event_id', eventId)
-      .eq('is_void', false)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -180,6 +197,78 @@ export async function getEventTicketsAction(eventId: string) {
   } catch (error) {
     console.error('getEventTicketsAction error:', error)
     return { status: 'error', message: 'Failed to fetch event tickets' }
+  }
+}
+
+/**
+ * Fetches all confirmed tickets for all events owned or co-hosted by the user.
+ */
+export async function getAllHostTicketsAction() {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      throw new Error('Unauthorized')
+    }
+
+    // 1. Get host profile
+    const { data: hostProfile } = await supabase
+      .from('host_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    // 2. Get all event IDs where user is host or co-host
+    const { data: hostEvents } = await supabase
+      .from('events')
+      .select('id')
+      .eq('host_id', hostProfile?.id || '')
+
+    const { data: cohostEvents } = await supabase
+      .from('event_cohosts')
+      .select('event_id')
+      .eq('host_user_id', user.id)
+      .eq('is_confirmed', true)
+
+    const eventIds = [
+      ...(hostEvents?.map(e => e.id) || []),
+      ...(cohostEvents?.map(e => e.event_id) || [])
+    ]
+
+    if (eventIds.length === 0) {
+      return { status: 'success', tickets: [] }
+    }
+
+    const { data: tickets, error } = await supabase
+      .from('tickets')
+      .select(`
+        id,
+        ticket_number,
+        holder_name,
+        is_checked_in,
+        is_void,
+        event_id,
+        events (
+          id,
+          title,
+          host_id
+        ),
+        bookings (
+          attendee_name,
+          attendee_email,
+          attendee_phone
+        )
+      `)
+      .in('event_id', eventIds)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return { status: 'success', tickets }
+  } catch (error) {
+    console.error('getAllHostTicketsAction error:', error)
+    return { status: 'error', message: 'Failed to fetch all tickets' }
   }
 }
 
@@ -212,23 +301,33 @@ export async function processAttendanceAction(params: {
     }
 
     const typedTicket = ticket as any
-    if (typedTicket.events?.host_id !== user.id) {
-       // Check co-hosts
-       const { data: cohost } = await supabase
-        .from('event_cohosts')
-        .select('id')
-        .eq('event_id', typedTicket.event_id)
-        .eq('host_user_id', user.id)
-        .eq('is_confirmed', true)
+    if (typedTicket.events) {
+      const { data: hostProfile } = await supabase
+        .from('host_profiles')
+        .select('user_id')
+        .eq('id', typedTicket.events.host_id)
         .single()
 
-       if (!cohost) {
-         return { status: 'error', message: 'Unauthorized: You are not a host for this event' }
-       }
+      if (hostProfile?.user_id !== user.id) {
+        // Check co-hosts
+        const { data: cohost } = await supabase
+          .from('event_cohosts')
+          .select('id')
+          .eq('event_id', typedTicket.event_id)
+          .eq('host_user_id', user.id)
+          .eq('is_confirmed', true)
+          .single()
+
+        if (!cohost) {
+          return { status: 'error', message: 'Unauthorized: You are not a host for this event' }
+        }
+      }
     }
 
-    if (typedTicket.event_id !== params.eventId) {
-      return { status: 'error', message: 'Event ID mismatch' }
+    const targetEventId = params.eventId || typedTicket.event_id
+
+    if (typedTicket.event_id !== targetEventId) {
+      return { status: 'error', message: 'Event ID mismatch or unauthorized access' }
     }
 
     // 1. Log the attempt
@@ -236,7 +335,7 @@ export async function processAttendanceAction(params: {
       .from('attendance_logs')
       .insert({
         ticket_id: params.ticketId,
-        event_id: params.eventId,
+        event_id: targetEventId,
         host_id: user.id,
         status: params.status,
         denial_reason: params.denialReason || null
@@ -247,21 +346,27 @@ export async function processAttendanceAction(params: {
       return { status: 'error', message: 'Failed to log attendance' }
     }
 
-    // 2. If allowed, mark ticket as checked in
-    if (params.status === 'allowed') {
-      const { error: ticketError } = await supabase
-        .from('tickets')
-        .update({
-          is_checked_in: true,
-          checked_in_at: new Date().toISOString(),
-          checked_in_by: user.id
-        })
-        .eq('id', params.ticketId)
+    // 2. Update the ticket status
+    const updateData: any = {
+      checked_in_by: user.id
+    }
 
-      if (ticketError) {
-        console.error('Ticket update error:', ticketError)
-        return { status: 'error', message: 'Failed to mark ticket as checked in' }
-      }
+    if (params.status === 'allowed') {
+      updateData.is_checked_in = true
+      updateData.checked_in_at = new Date().toISOString()
+    } else if (params.status === 'denied') {
+      updateData.is_void = true
+      updateData.voided_reason = params.denialReason || 'Denied by host'
+    }
+
+    const { error: updateError } = await supabase
+      .from('tickets')
+      .update(updateData)
+      .eq('id', params.ticketId)
+
+    if (updateError) {
+      console.error('Ticket update error:', updateError)
+      return { status: 'error', message: `Failed to ${params.status === 'allowed' ? 'allow' : 'deny'} entry` }
     }
 
     return { status: 'success', message: params.status === 'allowed' ? 'Entry allowed successfully' : 'Entry denied logged' }

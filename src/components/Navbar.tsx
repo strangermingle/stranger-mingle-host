@@ -5,6 +5,17 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { logoutAction } from '@/actions/auth.actions';
 import { CreateEventButton } from './layout/CreateEventButton';
+import { 
+    LayoutDashboard, 
+    Calendar, 
+    Users, 
+    MapPin, 
+    QrCode, 
+    ChevronDown, 
+    LogOut, 
+    User as UserIcon,
+    Settings
+} from 'lucide-react';
 
 export default function Navbar({ user, dbUser, activePageId }: { 
     user?: any, 
@@ -12,6 +23,7 @@ export default function Navbar({ user, dbUser, activePageId }: {
     activePageId?: string 
 }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
 
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -19,6 +31,11 @@ export default function Navbar({ user, dbUser, activePageId }: {
 
     const closeMobileMenu = () => {
         setIsMobileMenuOpen(false);
+        setOpenSubmenu(null);
+    };
+
+    const toggleSubmenu = (menu: string) => {
+        setOpenSubmenu(openSubmenu === menu ? null : menu);
     };
 
     return (
@@ -129,19 +146,82 @@ export default function Navbar({ user, dbUser, activePageId }: {
                         />
                     </div>
 
-                    <div className="pt-5 border-t border-gray-100">
+                    <div className="pt-2">
                         {user ? (
-                            <div className="space-y-2">
-                                <Link
-                                    href="/profile"
-                                    className="block w-full px-4 py-3 text-sm bg-gray-50 text-zinc-900 text-center rounded-xl font-bold hover:bg-gray-100 transition-colors"
-                                    onClick={closeMobileMenu}
-                                >
-                                    Host Profile
-                                </Link>
-                                <form action={logoutAction} className="block w-full text-left pt-2">
-                                    <button type="submit" className="block w-full px-4 py-3 text-sm text-red-600 text-center font-bold hover:bg-red-50 rounded-xl transition-colors" onClick={closeMobileMenu}>
-                                        Sign out
+                            <div className="space-y-4">
+                                {/* Host Profile / Dashboard */}
+                                <div className="space-y-1">
+                                    <Link
+                                        href="/profile"
+                                        className="flex items-center justify-between w-full px-4 py-3 text-sm text-zinc-900 rounded-xl font-bold hover:bg-gray-50 transition-colors group"
+                                        onClick={closeMobileMenu}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100">
+                                                <UserIcon className="w-4 h-4 text-indigo-600" />
+                                            </div>
+                                            <span>Dashboard Profile</span>
+                                        </div>
+                                    </Link>
+                                </div>
+
+                                {/* Events Dropdown */}
+                                <div className="space-y-1">
+                                    <button
+                                        onClick={() => toggleSubmenu('events')}
+                                        className="flex items-center justify-between w-full px-4 py-3 text-sm text-zinc-900 rounded-xl font-bold hover:bg-gray-50 transition-colors group"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-amber-50 rounded-lg group-hover:bg-amber-100">
+                                                <Calendar className="w-4 h-4 text-amber-600" />
+                                            </div>
+                                            <span>Manage Events</span>
+                                        </div>
+                                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${openSubmenu === 'events' ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    
+                                    {openSubmenu === 'events' && (
+                                        <div className="ml-4 pl-9 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                                            <Link href="/host-dashboard" className="block py-2.5 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-900" onClick={closeMobileMenu}>Events List</Link>
+                                            <Link href="/events/locations" className="block py-2.5 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-900" onClick={closeMobileMenu}>Venues & Locations</Link>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Attendance Dropdown */}
+                                <div className="space-y-1">
+                                    <button
+                                        onClick={() => toggleSubmenu('attendance')}
+                                        className="flex items-center justify-between w-full px-4 py-3 text-sm text-zinc-900 rounded-xl font-bold hover:bg-gray-50 transition-colors group"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-emerald-50 rounded-lg group-hover:bg-emerald-100">
+                                                <Users className="w-4 h-4 text-emerald-600" />
+                                            </div>
+                                            <span>Attendance</span>
+                                        </div>
+                                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${openSubmenu === 'attendance' ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    
+                                    {openSubmenu === 'attendance' && (
+                                        <div className="ml-4 pl-9 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                                            <Link href="/attendance/events" className="block py-2.5 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-900" onClick={closeMobileMenu}>Guest List</Link>
+                                            <Link href="/attendance/scanner" className="block py-2.5 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-900" onClick={closeMobileMenu}>QR Scanner</Link>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Logout */}
+                                <form action={logoutAction} className="block w-full pt-4 border-t border-gray-100">
+                                    <button 
+                                        type="submit" 
+                                        className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors group"
+                                        onClick={closeMobileMenu}
+                                    >
+                                        <div className="p-2 bg-red-50 rounded-lg group-hover:bg-red-100 transition-colors">
+                                            <LogOut className="w-4 h-4" />
+                                        </div>
+                                        <span>Sign out</span>
                                     </button>
                                 </form>
                             </div>
@@ -149,10 +229,10 @@ export default function Navbar({ user, dbUser, activePageId }: {
                             <div className="grid grid-cols-1 gap-3">
                                 <Link
                                     href="/login"
-                                    className="px-4 py-3 text-sm bg-gray-50 text-zinc-900 text-center rounded-xl font-bold hover:bg-gray-100 transition-colors"
+                                    className="px-4 py-4 text-sm bg-gray-950 text-white text-center rounded-2xl font-bold hover:bg-black transition-all shadow-lg shadow-gray-200 active:scale-[0.98]"
                                     onClick={closeMobileMenu}
                                 >
-                                    Log in
+                                    Log in to Host account
                                 </Link>
                             </div>
                         )}

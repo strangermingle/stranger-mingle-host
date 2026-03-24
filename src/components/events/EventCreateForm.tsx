@@ -10,6 +10,7 @@ import {
   Type, Ticket, HelpCircle, Banknote, CheckCircle2, Globe, Tag, Image as ImageIcon 
 } from 'lucide-react'
 import Script from 'next/script'
+import LocationPicker from './LocationPicker'
 
 interface Category {
   id: string
@@ -54,6 +55,7 @@ export default function EventCreateForm({ categories, hostProfiles, initialData,
     vertical_poster_url: initialData?.vertical_poster_url || '',
     description: initialData?.description || '',
     short_description: initialData?.short_description || '',
+    location_id: initialData?.location_id || '',
     location: initialData?.location || {
       venue_name: '',
       address_line_1: '',
@@ -63,9 +65,15 @@ export default function EventCreateForm({ categories, hostProfiles, initialData,
       postal_code: ''
     },
     online_event_url: initialData?.online_event_url || '',
+    online_platform: initialData?.online_platform || 'Zoom',
+    online_url_reveal: initialData?.online_url_reveal || 'after_booking',
     max_capacity: initialData?.max_capacity || 100,
     is_age_restricted: initialData?.is_age_restricted || false,
     min_age: initialData?.min_age || 18,
+    meta_title: initialData?.meta_title || '',
+    meta_description: initialData?.meta_description || '',
+    cover_image_alt: initialData?.cover_image_alt || '',
+    vertical_poster_alt: initialData?.vertical_poster_alt || '',
     ticket_tiers: initialData?.ticket_tiers || [
       {
         name: 'General Admission',
@@ -349,6 +357,34 @@ export default function EventCreateForm({ categories, hostProfiles, initialData,
             </div>
           </div>
 
+          {/* SEO & Discoverability (New Section) */}
+          <div className="bg-indigo-50/30 p-6 rounded-xl border border-indigo-100/50 space-y-6">
+            <div className="flex items-center gap-3 pb-2 border-b border-indigo-100/50">
+              <Globe className="w-4 h-4 text-indigo-600" />
+              <h2 className="text-[10px] font-black uppercase tracking-widest text-indigo-900">SEO & Search Engine Ranking</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Meta Title (SEO)</label>
+                <Input
+                  placeholder="Appears in Google search results..."
+                  value={formData.meta_title}
+                  onChange={(e) => handleChange('meta_title', e.target.value)}
+                  className="h-10 border-gray-100 bg-white rounded-lg font-bold text-xs shadow-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Meta Description</label>
+                <Input
+                  placeholder="Brief summary for search engines..."
+                  value={formData.meta_description}
+                  onChange={(e) => handleChange('meta_description', e.target.value)}
+                  className="h-10 border-gray-100 bg-white rounded-lg font-bold text-xs shadow-sm"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Logistics (Compact Box) */}
           <div className="bg-gray-50/50 p-6 rounded-xl border border-gray-100 space-y-6">
             <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
@@ -398,13 +434,76 @@ export default function EventCreateForm({ categories, hostProfiles, initialData,
                 </div>
 
                 {formData.event_type !== 'online' ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input placeholder="Venue Name" value={formData.location.venue_name} onChange={(e) => handleChange('location.venue_name', e.target.value)} className="h-10 border-gray-100 rounded-lg font-bold text-xs bg-white" />
-                    <Input placeholder="City" value={formData.location.city} onChange={(e) => handleChange('location.city', e.target.value)} className="h-10 border-gray-100 rounded-lg font-bold text-xs bg-white" />
-                  </div>
+                  <LocationPicker 
+                    selectedId={formData.location_id} 
+                    onSelect={(id) => handleChange('location_id', id)} 
+                  />
                 ) : (
-                  <Input placeholder="Link / Platform URL" value={formData.online_event_url} onChange={(e) => handleChange('online_event_url', e.target.value)} className="h-10 border-gray-100 rounded-lg font-bold text-xs bg-white" />
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={formData.online_platform}
+                        onChange={(e) => handleChange('online_platform', e.target.value)}
+                        className="h-10 px-3 rounded-lg border border-gray-100 bg-white font-bold text-[10px] appearance-none shadow-sm focus:border-zinc-950"
+                      >
+                        <option value="Zoom">Zoom</option>
+                        <option value="Google Meet">Google Meet</option>
+                        <option value="Discord">Discord</option>
+                        <option value="YouTube Live">YouTube Live</option>
+                        <option value="Custom">Custom Platform</option>
+                      </select>
+                      <select
+                        value={formData.online_url_reveal}
+                        onChange={(e) => handleChange('online_url_reveal', e.target.value)}
+                        className="h-10 px-3 rounded-lg border border-gray-100 bg-white font-bold text-[10px] appearance-none shadow-sm focus:border-zinc-950"
+                      >
+                        <option value="after_booking">Reveal after booking</option>
+                        <option value="day_of">Reveal on day of event</option>
+                        <option value="public">Make link public</option>
+                      </select>
+                    </div>
+                    <Input placeholder="Link / Platform URL" value={formData.online_event_url} onChange={(e) => handleChange('online_event_url', e.target.value)} className="h-10 border-gray-100 rounded-lg font-bold text-xs bg-white" />
+                  </div>
                 )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Users className="w-3.5 h-3.5 text-zinc-400" />
+                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-900">Capacity & Age</label>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-zinc-400 tracking-tighter">Max Capacity</label>
+                    <Input 
+                      type="number" 
+                      value={formData.max_capacity} 
+                      onChange={(e) => handleChange('max_capacity', parseInt(e.target.value))} 
+                      className="h-10 border-gray-100 rounded-lg font-bold text-xs bg-white" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[9px] font-black uppercase text-zinc-400 tracking-tighter">Min Age</label>
+                      <button 
+                        type="button"
+                        onClick={() => handleChange('is_age_restricted', !formData.is_age_restricted)}
+                        className={`text-[8px] font-bold px-1.5 py-0.5 rounded transition-colors ${formData.is_age_restricted ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400'}`}
+                      >
+                        {formData.is_age_restricted ? 'Restricted' : 'No Limit'}
+                      </button>
+                    </div>
+                    <Input 
+                      type="number" 
+                      disabled={!formData.is_age_restricted}
+                      value={formData.min_age} 
+                      onChange={(e) => handleChange('min_age', parseInt(e.target.value))} 
+                      className={`h-10 border-gray-100 rounded-lg font-bold text-xs bg-white ${!formData.is_age_restricted && 'opacity-30'}`} 
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -444,6 +543,14 @@ export default function EventCreateForm({ categories, hostProfiles, initialData,
                   </label>
                   {uploading === 'cover_image_url' && <div className="absolute inset-0 bg-white/80 flex items-center justify-center text-[10px] font-black animate-pulse z-30">UPLOADING...</div>}
                 </div>
+                {formData.cover_image_url && (
+                  <Input
+                    placeholder="Describe image (Alt Text)..."
+                    value={formData.cover_image_alt}
+                    onChange={(e) => handleChange('cover_image_alt', e.target.value)}
+                    className="h-8 border-gray-100 bg-transparent rounded-lg font-bold text-[10px] shadow-none focus:bg-white"
+                  />
+                )}
               </div>
 
               <div className="space-y-1">
@@ -474,6 +581,14 @@ export default function EventCreateForm({ categories, hostProfiles, initialData,
                   </label>
                   {uploading === 'vertical_poster_url' && <div className="absolute inset-0 bg-white/80 flex items-center justify-center text-[10px] font-black animate-pulse z-30">UPLOADING...</div>}
                 </div>
+                {formData.vertical_poster_url && (
+                  <Input
+                    placeholder="Describe poster (Alt Text)..."
+                    value={formData.vertical_poster_alt}
+                    onChange={(e) => handleChange('vertical_poster_alt', e.target.value)}
+                    className="h-8 border-gray-100 bg-transparent rounded-lg font-bold text-[10px] shadow-none focus:bg-white"
+                  />
+                )}
               </div>
             </div>
 

@@ -1,8 +1,20 @@
-export default function ScannerPage() {
+import { createClient } from '@/lib/supabase/server'
+import { AttendanceTab } from '@/components/members/AttendanceTab'
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Ticket Scanner — Stranger Mingle',
+  description: 'Scan event tickets and manage check-ins',
+}
+
+export default async function ScannerPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
   return (
-    <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
-      <h1 className="text-2xl font-black text-gray-900 mb-4">Ticket Scanner</h1>
-      <p className="text-gray-500">Scan QR codes at the door to check-in attendees.</p>
+    <div className="space-y-6">
+      <AttendanceTab userId={user.id} defaultMode="auto" />
     </div>
   )
 }

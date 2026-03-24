@@ -31,15 +31,17 @@ export async function createEventAction(formData: FormData) {
       return { error: 'Invalid data provided' }
     }
 
-    // 1. Create Location if provided and not empty
-    let locationId = null
+    // 1. Determine Location ID
+    let locationId = validated.location_id || null
+    
+    // If no location_id but has raw location data, create a new one
     const hasLocationData = validated.location && (
       validated.location.venue_name || 
       validated.location.address_line_1 || 
       validated.location.city
     )
 
-    if (validated.event_type !== 'online' && hasLocationData && validated.location) {
+    if (!locationId && validated.event_type !== 'online' && hasLocationData && validated.location) {
       const { data: loc, error: locError } = await (supabase
         .from('locations') as any)
         .insert({
@@ -76,13 +78,21 @@ export async function createEventAction(formData: FormData) {
         short_description: validated.short_description,
         description: validated.description,
         cover_image_url: validated.cover_image_url || null,
+        cover_image_alt: validated.cover_image_alt || null,
         vertical_poster_url: validated.vertical_poster_url || null,
+        vertical_poster_alt: validated.vertical_poster_alt || null,
         is_age_restricted: validated.is_age_restricted,
         min_age: validated.min_age,
         doors_open_at: validated.doors_open_at || null,
         refund_policy: validated.refund_policy as any,
         refund_policy_text: validated.refund_policy_text,
         ticketing_mode: validated.ticketing_mode as any,
+        online_event_url: validated.online_event_url || null,
+        online_platform: validated.online_platform || null,
+        online_url_reveal: (validated.online_url_reveal as any) || 'after_booking',
+        max_capacity: validated.max_capacity || null,
+        meta_title: validated.meta_title || null,
+        meta_description: validated.meta_description || null,
         slug: validated.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).substring(2, 7)
       } as any)
       .select()
@@ -225,6 +235,7 @@ export async function updateEventAction(eventId: string, formData: FormData) {
       .from('events')
       .update({
         title: validated.title,
+        location_id: validated.location_id || null,
         // Don't update slug here yet, we'll refetch it after update to see if DB changed it
         category_id: validated.category_id,
         event_type: validated.event_type,
@@ -233,12 +244,20 @@ export async function updateEventAction(eventId: string, formData: FormData) {
         short_description: validated.short_description,
         description: validated.description,
         cover_image_url: validated.cover_image_url || null,
+        cover_image_alt: validated.cover_image_alt || null,
         vertical_poster_url: validated.vertical_poster_url || null,
+        vertical_poster_alt: validated.vertical_poster_alt || null,
         is_age_restricted: validated.is_age_restricted,
         min_age: validated.min_age,
         doors_open_at: validated.doors_open_at || null,
         refund_policy: validated.refund_policy as any,
         refund_policy_text: validated.refund_policy_text || null,
+        online_event_url: validated.online_event_url || null,
+        online_platform: validated.online_platform || null,
+        online_url_reveal: (validated.online_url_reveal as any) || 'after_booking',
+        max_capacity: validated.max_capacity || null,
+        meta_title: validated.meta_title || null,
+        meta_description: validated.meta_description || null,
         status: (eventData.creation_fee_paid || validated.status !== 'published') ? validated.status : 'draft'
       })
       .eq('id', eventId)

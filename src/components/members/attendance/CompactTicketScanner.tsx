@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import { Search, Loader2, Camera, Keyboard } from 'lucide-react'
 
 interface CompactTicketScannerProps {
-  eventId: string
+  eventId?: string | null
 }
 
 export function CompactTicketScanner({ eventId }: CompactTicketScannerProps) {
