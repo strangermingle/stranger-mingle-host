@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getUserWithHostProfile } from '@/lib/repositories/users.repository'
-import HostProfileForm from '@/components/members/HostProfileForm'
+import HostProfileForm from '@/components/dashboard/profile/HostProfileForm'
 import { redirect } from 'next/navigation'
 
 export default async function HostProfilePage() {

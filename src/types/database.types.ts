@@ -140,6 +140,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "attendance_logs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "v_events_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "attendance_logs_host_id_fkey"
             columns: ["host_id"]
             isOneToOne: false
@@ -451,6 +458,42 @@ export type Database = {
           },
         ]
       }
+      contact_submissions: {
+        Row: {
+          city: string | null
+          created_at: string | null
+          email: string
+          id: string
+          message: string | null
+          name: string
+          phone: string
+          source: string | null
+          subject: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          message?: string | null
+          name: string
+          phone: string
+          source?: string | null
+          subject?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          message?: string | null
+          name?: string
+          phone?: string
+          source?: string | null
+          subject?: string | null
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           context_event_id: string | null
@@ -560,6 +603,45 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_age_restrictions: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          min_age: number | null
+          restriction_text: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          min_age?: number | null
+          restriction_text: string
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          min_age?: number | null
+          restriction_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_age_restrictions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_age_restrictions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "v_events_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1195,8 +1277,11 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           category_id: string
+          cover_image_alt: string | null
           cover_image_url: string | null
           created_at: string | null
+          creation_fee_paid: boolean | null
+          creation_fee_payment_id: string | null
           description: string | null
           doors_open_at: string | null
           end_datetime: string
@@ -1238,6 +1323,7 @@ export type Database = {
           timezone: string
           title: string
           updated_at: string | null
+          vertical_poster_alt: string | null
           vertical_poster_url: string | null
           views_count: number | null
         }
@@ -1248,8 +1334,11 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           category_id: string
+          cover_image_alt?: string | null
           cover_image_url?: string | null
           created_at?: string | null
+          creation_fee_paid?: boolean | null
+          creation_fee_payment_id?: string | null
           description?: string | null
           doors_open_at?: string | null
           end_datetime: string
@@ -1291,6 +1380,7 @@ export type Database = {
           timezone?: string
           title: string
           updated_at?: string | null
+          vertical_poster_alt?: string | null
           vertical_poster_url?: string | null
           views_count?: number | null
         }
@@ -1301,8 +1391,11 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           category_id?: string
+          cover_image_alt?: string | null
           cover_image_url?: string | null
           created_at?: string | null
+          creation_fee_paid?: boolean | null
+          creation_fee_payment_id?: string | null
           description?: string | null
           doors_open_at?: string | null
           end_datetime?: string
@@ -1344,6 +1437,7 @@ export type Database = {
           timezone?: string
           title?: string
           updated_at?: string | null
+          vertical_poster_alt?: string | null
           vertical_poster_url?: string | null
           views_count?: number | null
         }
@@ -1366,7 +1460,14 @@ export type Database = {
             foreignKeyName: "events_host_id_fkey"
             columns: ["host_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "host_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "v_host_profile"
             referencedColumns: ["id"]
           },
           {
@@ -1463,6 +1564,72 @@ export type Database = {
           },
         ]
       }
+      host_applications: {
+        Row: {
+          age: number
+          agree_to_safety: boolean
+          agree_to_terms: boolean
+          agree_to_zero_harassment: boolean
+          availability: string[]
+          city: string
+          created_at: string | null
+          email: string
+          event_formats: string[]
+          events_attended: string
+          full_name: string
+          has_prior_experience: string
+          id: string
+          member_since: string
+          occupation: string | null
+          phone: string
+          prior_experience_detail: string | null
+          safety_understanding: string
+          why_host: string
+        }
+        Insert: {
+          age: number
+          agree_to_safety: boolean
+          agree_to_terms: boolean
+          agree_to_zero_harassment: boolean
+          availability: string[]
+          city: string
+          created_at?: string | null
+          email: string
+          event_formats: string[]
+          events_attended: string
+          full_name: string
+          has_prior_experience: string
+          id?: string
+          member_since: string
+          occupation?: string | null
+          phone: string
+          prior_experience_detail?: string | null
+          safety_understanding: string
+          why_host: string
+        }
+        Update: {
+          age?: number
+          agree_to_safety?: boolean
+          agree_to_terms?: boolean
+          agree_to_zero_harassment?: boolean
+          availability?: string[]
+          city?: string
+          created_at?: string | null
+          email?: string
+          event_formats?: string[]
+          events_attended?: string
+          full_name?: string
+          has_prior_experience?: string
+          id?: string
+          member_since?: string
+          occupation?: string | null
+          phone?: string
+          prior_experience_detail?: string | null
+          safety_understanding?: string
+          why_host?: string
+        }
+        Relationships: []
+      }
       host_follows: {
         Row: {
           created_at: string | null
@@ -1497,17 +1664,23 @@ export type Database = {
             referencedRelation: "host_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "host_follows_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "v_host_profile"
+            referencedColumns: ["id"]
+          },
         ]
       }
       host_profiles: {
         Row: {
           approved_at: string | null
           approved_by: string | null
-          bank_account_verified: boolean | null
           bank_account_name: string | null
           bank_account_number: string | null
+          bank_account_verified: boolean | null
           bank_ifsc_code: string | null
-          upi_id: string | null
           banner_url: string | null
           city: string | null
           country: string | null
@@ -1536,17 +1709,17 @@ export type Database = {
           total_tickets_sold: number | null
           twitter_handle: string | null
           updated_at: string | null
+          upi_id: string | null
           user_id: string
           youtube_url: string | null
         }
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
-          bank_account_verified?: boolean | null
           bank_account_name?: string | null
           bank_account_number?: string | null
+          bank_account_verified?: boolean | null
           bank_ifsc_code?: string | null
-          upi_id?: string | null
           banner_url?: string | null
           city?: string | null
           country?: string | null
@@ -1575,17 +1748,17 @@ export type Database = {
           total_tickets_sold?: number | null
           twitter_handle?: string | null
           updated_at?: string | null
+          upi_id?: string | null
           user_id: string
           youtube_url?: string | null
         }
         Update: {
           approved_at?: string | null
           approved_by?: string | null
-          bank_account_verified?: boolean | null
           bank_account_name?: string | null
           bank_account_number?: string | null
+          bank_account_verified?: boolean | null
           bank_ifsc_code?: string | null
-          upi_id?: string | null
           banner_url?: string | null
           city?: string | null
           country?: string | null
@@ -1614,6 +1787,7 @@ export type Database = {
           total_tickets_sold?: number | null
           twitter_handle?: string | null
           updated_at?: string | null
+          upi_id?: string | null
           user_id?: string
           youtube_url?: string | null
         }
@@ -1629,6 +1803,87 @@ export type Database = {
             foreignKeyName: "host_profiles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      host_rating: {
+        Row: {
+          created_at: string | null
+          host_id: string
+          id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          host_id: string
+          id?: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          host_id?: string
+          id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "host_rating_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "host_rating_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      host_reviews: {
+        Row: {
+          created_at: string | null
+          host_id: string
+          id: string
+          is_approved: boolean | null
+          review_text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          host_id: string
+          id?: string
+          is_approved?: boolean | null
+          review_text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          host_id?: string
+          id?: string
+          is_approved?: boolean | null
+          review_text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "host_reviews_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "host_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -2266,9 +2521,11 @@ export type Database = {
           plan_type: Database["public"]["Enums"]["subscription_plan_interval"]
           rate_limit_events: number
           razorpay_payment_id: string | null
+          razorpay_subscription_id: string | null
           start_date: string
           status: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           amount_paid?: number | null
@@ -2281,9 +2538,11 @@ export type Database = {
           plan_type?: Database["public"]["Enums"]["subscription_plan_interval"]
           rate_limit_events?: number
           razorpay_payment_id?: string | null
+          razorpay_subscription_id?: string | null
           start_date?: string
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           amount_paid?: number | null
@@ -2296,9 +2555,11 @@ export type Database = {
           plan_type?: Database["public"]["Enums"]["subscription_plan_interval"]
           rate_limit_events?: number
           razorpay_payment_id?: string | null
+          razorpay_subscription_id?: string | null
           start_date?: string
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -2306,6 +2567,20 @@ export type Database = {
             columns: ["host_id"]
             isOneToOne: false
             referencedRelation: "host_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "v_host_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -2765,17 +3040,22 @@ export type Database = {
           city: string | null
           country: string | null
           cover_image_url: string | null
+          description: string | null
           end_datetime: string | null
           event_type: string | null
           fts: unknown
+          host_alias: string | null
           host_display_name: string | null
           host_logo: string | null
+          host_tagline: string | null
           host_username: string | null
           id: string | null
           interests_count: number | null
           is_featured: boolean | null
+          is_recurring: boolean | null
           is_sponsored: boolean | null
           likes_count: number | null
+          max_capacity: number | null
           max_price: number | null
           min_price: number | null
           short_description: string | null
@@ -2791,35 +3071,80 @@ export type Database = {
         }
         Relationships: []
       }
+      v_host_profile: {
+        Row: {
+          anonymous_alias: string | null
+          banner_url: string | null
+          city: string | null
+          country: string | null
+          description: string | null
+          display_name: string | null
+          facebook_url: string | null
+          follower_count: number | null
+          id: string | null
+          instagram_handle: string | null
+          is_approved: boolean | null
+          logo_url: string | null
+          organisation_name: string | null
+          profile_image: string | null
+          rating_avg: number | null
+          rating_count: number | null
+          state: string | null
+          tagline: string | null
+          total_events_hosted: number | null
+          twitter_handle: string | null
+          user_id: string | null
+          username: string | null
+          youtube_url: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "host_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_ticket_availability: {
         Row: {
           available: number | null
+          currency: string | null
           event_id: string | null
           is_sold_out: boolean | null
+          price: number | null
           reserved_count: number | null
           sold_count: number | null
           tier_id: string | null
           tier_name: string | null
+          tier_type: string | null
           total_quantity: number | null
         }
         Insert: {
           available?: never
+          currency?: string | null
           event_id?: string | null
           is_sold_out?: never
+          price?: number | null
           reserved_count?: number | null
           sold_count?: number | null
           tier_id?: string | null
           tier_name?: string | null
+          tier_type?: string | null
           total_quantity?: number | null
         }
         Update: {
           available?: never
+          currency?: string | null
           event_id?: string | null
           is_sold_out?: never
+          price?: number | null
           reserved_count?: number | null
           sold_count?: number | null
           tier_id?: string | null
           tier_name?: string | null
+          tier_type?: string | null
           total_quantity?: number | null
         }
         Relationships: [
@@ -2862,11 +3187,55 @@ export type Database = {
           r_ticket_number: string
         }[]
       }
+      create_event_complex: {
+        Args: {
+          age_restrictions?: Json
+          agenda?: Json
+          cohosts?: Json
+          event_data: Json
+          faqs?: Json
+          tags?: Json
+          ticket_tiers?: Json
+        }
+        Returns: string
+      }
+      create_pending_booking_v2:
+        | {
+            Args: {
+              p_attendee_email: string
+              p_attendee_name: string
+              p_attendee_phone: string
+              p_discount_amount: number
+              p_event_id: string
+              p_items: Json
+              p_subtotal: number
+              p_total_amount: number
+              p_user_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_attendee_email: string
+              p_attendee_name: string
+              p_attendee_phone: string
+              p_discount_amount: number
+              p_event_id: string
+              p_items: Json
+              p_razorpay_order_id: string
+              p_subtotal: number
+              p_total_amount: number
+              p_user_id: string
+            }
+            Returns: string
+          }
+      get_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_user_role: { Args: { user_id: string }; Returns: string }
       increment_reserved_count: {
         Args: { increment_by: number; tier_id: string }
         Returns: undefined
       }
+      is_admin: { Args: { user_id: string }; Returns: boolean }
       join_waitlist_atomic: {
         Args: { p_event_id: string; p_tier_id: string; p_user_id: string }
         Returns: {
@@ -2875,10 +3244,15 @@ export type Database = {
           r_was_already_on_list: boolean
         }[]
       }
+      release_expired_locks_for_event: {
+        Args: { p_event_id: string }
+        Returns: undefined
+      }
       set_event_interest: {
         Args: { p_event_id: string; p_interest_type: string; p_user_id: string }
         Returns: Json
       }
+      slugify: { Args: { "": string }; Returns: string }
       submit_event_review: {
         Args: {
           p_event_id: string
@@ -3042,4 +3416,3 @@ export const Constants = {
     },
   },
 } as const
-

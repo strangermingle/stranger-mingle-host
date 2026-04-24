@@ -13,7 +13,7 @@ export type CloudinaryUploadResponse = {
   format: string;
   width: number;
   height: number;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 /**
@@ -59,32 +59,31 @@ export async function uploadToCloudinary(
 
 export async function deleteFromCloudinary(url: string) {
   try {
-    // Extract public_id from secure_url (assuming it's a standard Cloudinary URL)
-    // Example: https://res.cloudinary.com/cloud_name/image/upload/v123456789/folder/image_id.jpg
+    // Standard Cloudinary URL: https://res.cloudinary.com/cloud_name/image/upload/v123456789/folder/image_id.jpg
     const parts = url.split('/')
-    const lastPart = parts[parts.length - 1]
-    const publicIdWithExtension = lastPart.split('.')[0]
-    
-    // Cloudinary filenames often have folders but the public_id includes them if they were specified at upload
-    // However, our uploads specify a folder but the returned secure_url often hides the folder structure 
-    // depending on the delivery URL settings.
-    // To be safer, we extract the part after /upload/ (excluding the version segment v123456789)
     const uploadIndex = parts.indexOf('upload')
-    if (uploadIndex === -1) return { error: 'Invalid URL' }
+    if (uploadIndex === -1) return { error: 'Invalid URL: No upload segment found' }
     
-    // The segments after /upload/ and skipping the version (starts with 'v')
+    // The segments after /upload/
     const relevantSegments = parts.slice(uploadIndex + 1)
-    if (relevantSegments[0].startsWith('v') && !isNaN(parseInt(relevantSegments[0].substring(1)))) {
+    
+    // Skip the version segment if it exists (e.g., v123456789)
+    if (relevantSegments[0].startsWith('v') && /^\d+$/.test(relevantSegments[0].substring(1))) {
        relevantSegments.shift()
     }
     
-    const publicId = relevantSegments.join('/').split('.')[0]
+    // Join remaining segments and remove file extension to get the public_id
+    const publicIdWithExtension = relevantSegments.join('/')
+    const publicId = publicIdWithExtension.split('.')[0]
     
+    if (!publicId) return { error: 'Invalid URL: Could not extract public ID' }
+
     const result = await cloudinary.uploader.destroy(publicId)
     return result
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Cloudinary deletion error:', err)
-    return { error: err.message }
+    const message = err instanceof Error ? err.message : 'Unknown deletion error'
+    return { error: message }
   }
 }
 

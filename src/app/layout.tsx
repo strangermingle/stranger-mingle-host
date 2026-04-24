@@ -1,25 +1,26 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import Script from "next/script";
-import ConsentBanner from "@/components/ConsentBanner";
-import GoogleTagManager from "@/components/GoogleTagManager";
+import type { Metadata } from 'next'
+import { Geist, Geist_Mono } from 'next/font/google'
+import './globals.css'
+import Script from 'next/script'
+import GoogleTagManager from '@/components/analytics/GoogleTagManager'
+import ConsentBanner from '@/components/analytics/ConsentBanner'
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
+})
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+})
 
 export const metadata: Metadata = {
   title: {
-    default: "Stranger Mingle — Host Dashboard",
-    template: "%s | Stranger Mingle Host"
+    default: 'Stranger Mingle — Host Dashboard',
+    template: '%s | SM Host',
   },
+  // Private host dashboard — block all crawlers
   robots: {
     index: false,
     follow: false,
@@ -31,25 +32,25 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: '/favicon.ico' },
-      { url: '/logo.svg', type: 'image/svg+xml' },
     ],
     shortcut: '/favicon.ico',
-    apple: '/apple-icon.png',
   },
-};
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
-  const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+  const GA_ID = process.env.NEXT_PUBLIC_GA_ID
 
   return (
     <html lang="en" className="overflow-x-hidden">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col overflow-x-hidden`}
       >
+        <GoogleTagManager />
+        {/* Google Analytics — track host activity */}
         {GA_ID && (
           <>
             <Script
@@ -60,15 +61,23 @@ export default function RootLayout({
               {`
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
+                window.gtag = gtag;
                 gtag('js', new Date());
                 gtag('config', '${GA_ID}');
               `}
             </Script>
           </>
         )}
-        <GoogleTagManager />
+
+        {/* Razorpay — event creation platform fee */}
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="afterInteractive"
+        />
+
         {children}
+        <ConsentBanner />
       </body>
     </html>
-  );
+  )
 }

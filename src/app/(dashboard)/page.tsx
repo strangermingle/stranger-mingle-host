@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Metadata } from 'next'
-import { DashboardOverview } from '@/components/members/DashboardOverview'
+import { DashboardOverview } from '@/components/dashboard/DashboardOverview'
 
 export const metadata: Metadata = {
   title: 'Dashboard — Stranger Mingle',

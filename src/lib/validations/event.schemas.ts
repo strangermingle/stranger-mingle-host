@@ -28,6 +28,8 @@ export const createEventSchema = z
       state: z.string().optional().nullable().or(z.literal('')),
       country: z.string().optional().nullable().or(z.literal('')),
       postal_code: z.string().optional().nullable().or(z.literal('')),
+      latitude: z.number().optional().nullable(),
+      longitude: z.number().optional().nullable(),
     }).optional().nullable(),
     online_event_url: z
       .string()
@@ -66,14 +68,16 @@ export const createEventSchema = z
     vertical_poster_alt: z.string().optional().or(z.literal('')),
     ticket_tiers: z.array(
       z.object({
+        id: z.string().uuid().optional(),
         name: z.string(),
+        description: z.string().optional(),
         tier_type: z.string(),
         price: z.number().min(0),
         total_quantity: z.number().int().positive(),
         max_per_booking: z.number().int().positive(),
-        tier_category: z.enum(['general', 'boys', 'girls', 'stag', 'couple', 'vip']).optional().default('general'),
         sale_start_at: z.string().optional(),
         sale_end_at: z.string().optional(),
+        perks: z.array(z.string()).optional(),
       })
     ).optional(),
     agenda: z.array(
@@ -90,7 +94,14 @@ export const createEventSchema = z
         answer: z.string(),
       })
     ).optional(),
-    tags: z.array(z.string()).optional()
+    tags: z.array(z.string()).optional(),
+    cohosts: z.array(z.string().uuid()).optional(),
+    age_restrictions: z.array(
+      z.object({
+        restriction_text: z.string(),
+        min_age: z.number().int().optional().nullable(),
+      })
+    ).optional(),
   })
   .refine(
     (data) => new Date(data.end_datetime) > new Date(data.start_datetime),
@@ -147,6 +158,8 @@ const _baseEventSchema = z.object({
     state: z.string().optional().nullable(),
     country: z.string().optional().nullable(),
     postal_code: z.string().optional().nullable(),
+    latitude: z.number().optional().nullable(),
+    longitude: z.number().optional().nullable(),
   }).optional().nullable(),
   online_event_url: z.string().url().optional().or(z.literal('')),
   online_platform: z.string().optional(),
@@ -167,14 +180,16 @@ const _baseEventSchema = z.object({
   vertical_poster_alt: z.string().optional().or(z.literal('')),
   ticket_tiers: z.array(
     z.object({
+      id: z.string().uuid().optional(),
       name: z.string(),
+      description: z.string().optional(),
       tier_type: z.string(),
       price: z.number().min(0),
       total_quantity: z.number().int().positive(),
       max_per_booking: z.number().int().positive(),
-      tier_category: z.enum(['general', 'boys', 'girls', 'stag', 'couple', 'vip']).optional().default('general'),
       sale_start_at: z.string().optional(),
       sale_end_at: z.string().optional(),
+      perks: z.array(z.string()).optional(),
     })
   ).optional(),
   agenda: z.array(
@@ -191,7 +206,14 @@ const _baseEventSchema = z.object({
       answer: z.string(),
     })
   ).optional(),
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  cohosts: z.array(z.string().uuid()).optional(),
+  age_restrictions: z.array(
+    z.object({
+      restriction_text: z.string(),
+      min_age: z.number().int().optional().nullable(),
+    })
+  ).optional(),
 })
 
 export const updateEventSchema = _baseEventSchema.partial().refine(

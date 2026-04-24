@@ -1,13 +1,13 @@
 /**
  * Utility to map low-level database or validation errors to user-friendly messages.
  */
-export function mapPostgresError(error: any): string {
+export function mapPostgresError(error: unknown): string {
   if (!error) return 'An unexpected error occurred';
 
   // Handle Supabase/Postgres error objects
-  const code = error.code;
-  const message = error.message || '';
-  const detail = error.detail || '';
+  const err = error as { code?: string; message?: string; detail?: string };
+  const code = err.code;
+  const message = err.message || '';
 
   // 23505: Unique violation
   if (code === '23505') {

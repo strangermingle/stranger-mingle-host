@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getEventDetailsAction } from '@/actions/event.actions'
-import EventCreateForm from '@/components/events/EventCreateForm'
+import CreateEventForm from '@/components/dashboard/events/CreateEventForm'
 import { redirect, notFound } from 'next/navigation'
 
 export default async function EditEventPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -51,7 +51,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ slug
         </p>
       </div>
       
-      <EventCreateForm 
+      <CreateEventForm 
         categories={categories || []} 
         hostProfiles={hostProfiles || []} 
         initialData={event}

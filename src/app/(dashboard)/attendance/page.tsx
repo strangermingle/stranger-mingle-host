@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Metadata } from 'next'
-import { AttendanceTab } from '@/components/members/AttendanceTab'
+import { AttendanceTab } from '@/components/dashboard/attendance/AttendanceTab'
 
 export const metadata: Metadata = {
   title: 'Attendance — Stranger Mingle',

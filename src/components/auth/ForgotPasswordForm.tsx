@@ -40,7 +40,7 @@ export function ForgotPasswordForm() {
     <div className="w-full">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {successMsg && (
-          <div className="rounded-md bg-green-50 p-3 text-sm text-green-600 dark:bg-green-900/30 dark:text-green-400">
+          <div className="rounded-md bg-black p-3 text-sm text-white dark:bg-black dark:text-white text-center">
             {successMsg}
           </div>
         )}
@@ -48,7 +48,7 @@ export function ForgotPasswordForm() {
         <div className="space-y-1">
           <label
             htmlFor="email"
-            className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300"
+            className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300 text-center"
           >
             Email
           </label>

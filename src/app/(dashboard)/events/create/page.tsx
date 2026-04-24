@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import EventCreateForm from '@/components/events/EventCreateForm'
+import CreateEventForm from '@/components/dashboard/events/CreateEventForm'
 import { redirect } from 'next/navigation'
 
 export default async function CreateEventPage() {
@@ -44,20 +44,34 @@ export default async function CreateEventPage() {
   }
 
   return (
-    <div className="py-8 md:py-12">
-      <div className="max-w-2xl mx-auto mb-10 text-center space-y-4">
-        <h1 className="text-4xl md:text-5xl font-black text-zinc-950 uppercase tracking-tighter leading-none">
-          Create <span className="text-indigo-600">Legendary</span><br />Experiences for strangers
+    <div className="py-12 md:py-20 relative overflow-hidden">
+      {/* Background Flourish */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-gradient-to-b from-indigo-50/50 to-transparent -z-10" />
+      <div className="absolute -top-24 -right-24 w-96 h-96 bg-indigo-100/20 rounded-full blur-3xl -z-10" />
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-100/20 rounded-full blur-3xl -z-10" />
+
+      <div className="max-w-4xl mx-auto mb-16 text-center space-y-6 relative">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">New Experience</span>
+        </div>
+        
+        <h1 className="text-5xl md:text-7xl font-black text-zinc-950 uppercase tracking-tighter leading-[0.9] animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
+          Create <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600">Legendary</span><br />
+          <span className="text-zinc-400">Memories</span>
         </h1>
-        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-          The finest events in the city start right here.
+        
+        <p className="max-w-md mx-auto text-sm font-bold text-gray-400 uppercase tracking-widest leading-relaxed opacity-60 animate-in fade-in slide-in-from-bottom-12 duration-700 delay-200">
+          The finest events in the city start right here. Fill in the details to launch your next experience.
         </p>
       </div>
       
-      <EventCreateForm 
-        categories={categories || []} 
-        hostProfiles={hostProfiles || []} 
-      />
+      <div className="max-w-6xl mx-auto px-4 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-300">
+        <CreateEventForm 
+          categories={categories || []} 
+          hostProfiles={hostProfiles || []} 
+        />
+      </div>
     </div>
   )
 }

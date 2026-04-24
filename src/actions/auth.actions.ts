@@ -11,6 +11,8 @@ import {
 } from '../lib/validations/auth.schemas'
 import { supabaseAdmin } from '../lib/supabase/admin'
 import crypto from 'crypto'
+import { resend } from '../lib/resend'
+import { env } from '../lib/env'
 
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex')
@@ -43,7 +45,7 @@ export async function loginAction(formData: FormData) {
   }
 
   revalidatePath('/')
-  redirect('/')
+  return { success: true }
 }
 
 export async function registerAction(formData: FormData) {
@@ -158,29 +160,46 @@ export async function forgotPasswordAction(formData: FormData) {
         type: 'recovery',
         email: email,
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`,
+          redirectTo: `${env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/reset-password`,
         }
       })
 
       if (!linkError && linkData?.properties?.action_link) {
-        // 3. Trigger our custom Resend-based Edge Function
-        const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const functionUrl = `${baseUrl}/functions/v1/send-email`
-        
-        await fetch(functionUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
-          },
-          body: JSON.stringify({
-            recipient_email: email,
-            user_id: user.id,
-            subject: 'Reset Your Password — Stranger Mingle',
-            body: `We received a request to reset your password for your Stranger Mingle account. Click the button below to choose a new password.`,
-            action_url: linkData.properties.action_link
-          })
-        })
+        // 3. Send email via Resend
+        await resend.emails.send({
+          from: 'Stranger Mingle <team@strangermingle.com>',
+          to: [email],
+          subject: 'Reset Your Password — Stranger Mingle',
+          html: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1f2937; background-color: #f9fafb;">
+              <div style="text-align: center; margin-bottom: 32px;">
+                <h1 style="color: #6366f1; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em;">Stranger Mingle</h1>
+              </div>
+              
+              <div style="background-color: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+                <h2 style="font-size: 20px; font-weight: 700; color: #111827; margin-top: 0; margin-bottom: 16px;">Reset your password</h2>
+                <p style="font-size: 16px; line-height: 26px; color: #4b5563; margin-bottom: 24px;">
+                  We received a request to reset your password for your Stranger Mingle account. Click the button below to choose a new password.
+                </p>
+                
+                <div style="margin-top: 40px; text-align: center;">
+                  <a href="${linkData.properties.action_link}" style="background-color: #6366f1; color: #ffffff; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);">
+                    Set New Password
+                  </a>
+                </div>
+                
+                <p style="margin-top: 32px; font-size: 13px; color: #9ca3af; line-height: 20px; text-align: center;">
+                  If you didn't request a password reset, you can safely ignore this email. This link will expire shortly.
+                </p>
+              </div>
+              
+              <div style="margin-top: 32px; text-align: center; font-size: 13px; color: #9ca3af; line-height: 20px;">
+                <p style="margin-bottom: 8px;">You're receiving this because you use Stranger Mingle.</p>
+                <p style="margin: 0;">&copy; 2026 Stranger Mingle. All rights reserved.</p>
+              </div>
+            </div>
+          `
+        });
       }
     }
   } catch (err) {

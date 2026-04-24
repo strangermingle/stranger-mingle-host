@@ -9,6 +9,8 @@ import { Database } from '@/types/database.types';
 import crypto from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { env } from '@/lib/env';
+import { getPlatformConfig } from '@/lib/repositories/platform.repository';
+
 
 export type BookingResult = {
   success: boolean;
@@ -198,10 +200,14 @@ export async function initiateBookingAction(input: CreateBookingInput): Promise<
     }
 
     const taxable_amount = subtotal - discountAmount;
-    const platform_fee = taxable_amount * 0.10;
-    const gst_on_fee = platform_fee * 0.18;
+    
+    // Fetch platform configuration for rates
+    const config = await getPlatformConfig();
+    const platform_fee = taxable_amount * (config.platform_fee_pct / 100);
+    const gst_on_fee = platform_fee * (config.gst_rate_pct / 100);
     const total_amount = taxable_amount + gst_on_fee;
-    const host_payout = taxable_amount * 0.90;
+    const host_payout = taxable_amount - platform_fee - gst_on_fee;
+
 
     // g. Create Razorpay order
     const bookingRef = `SM-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;

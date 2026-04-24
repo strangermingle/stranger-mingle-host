@@ -229,7 +229,7 @@ export const subscribeToSessionMessages = (
   onMessage: (message: any) => void,
   onError?: (error: any) => void
 ) => {
-  let seen = new Set<string>();
+  const seen = new Set<string>();
   
   // Robust guard for realtime
   if (typeof window === 'undefined' || typeof globalThis.WebSocket === 'undefined' || !globalThis.WebSocket) {

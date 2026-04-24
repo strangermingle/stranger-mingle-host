@@ -8,9 +8,9 @@ export function CreateEventButton({ isLoggedIn, activePageId }: { isLoggedIn: bo
 
   if (isLoggedIn) {
     if (activePageId) {
-      href = `/host-dashboard/${activePageId}/create-event`;
+      href = `/events/create?hostId=${activePageId}`;
     } else {
-      href = '/create-event';
+      href = '/events/create';
     }
   }
 

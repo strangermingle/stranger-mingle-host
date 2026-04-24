@@ -33,7 +33,7 @@ export async function GET(request: Request) {
         // Derive username from email local part + random 4 digits
         const localPart = u.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '')
         const rnd = Math.floor(1000 + Math.random() * 9000)
-        let username = `${localPart}${rnd}`.substring(0, 50)
+        const username = `${localPart}${rnd}`.substring(0, 50)
         
         // Generate anonymous alias: adjective + animal + 4 digits
         const adjectives = ['Happy', 'Brave', 'Quiet', 'Swift', 'Red', 'Blue', 'Neon', 'Cool']

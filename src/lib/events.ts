@@ -178,10 +178,10 @@ export async function getEventsByCity(city: string): Promise<Event[]> {
 
     // Flatten location fields for easier usage in legacy components
     return (data || []).map(event => ({
-        ...event,
-        city: (event.location as any)?.city,
-        venue_name: (event.location as any)?.venue_name,
-        full_address: `${(event.location as any)?.address_line1 || ''} ${(event.location as any)?.address_line2 || ''}`.trim()
+      ...event,
+      city: (event.location as { city?: string })?.city,
+      venue_name: (event.location as { venue_name?: string })?.venue_name,
+      full_address: `${(event.location as { address_line1?: string })?.address_line1 || ''} ${(event.location as { address_line2?: string })?.address_line2 || ''}`.trim()
     })) as unknown as Event[];
 }
 
@@ -206,10 +206,10 @@ export async function getAllLiveEvents(): Promise<Event[]> {
 
     // Flatten location fields
     return (data || []).map(event => ({
-        ...event,
-        city: (event.location as any)?.city,
-        venue_name: (event.location as any)?.venue_name,
-        full_address: `${(event.location as any)?.address_line1 || ''} ${(event.location as any)?.address_line2 || ''}`.trim()
+      ...event,
+      city: (event.location as { city?: string })?.city,
+      venue_name: (event.location as { venue_name?: string })?.venue_name,
+      full_address: `${(event.location as { address_line1?: string })?.address_line1 || ''} ${(event.location as { address_line2?: string })?.address_line2 || ''}`.trim()
     })) as unknown as Event[];
 }
 
@@ -239,10 +239,10 @@ export async function getEventById(id: string): Promise<Event | null> {
     if (!data) return null;
 
     return {
-        ...data,
-        city: (data.location as any)?.city,
-        venue_name: (data.location as any)?.venue_name,
-        full_address: `${(data.location as any)?.address_line1 || ''} ${(data.location as any)?.address_line2 || ''}`.trim()
+      ...data,
+      city: (data.location as { city?: string })?.city,
+      venue_name: (data.location as { venue_name?: string })?.venue_name,
+      full_address: `${(data.location as { address_line1?: string })?.address_line1 || ''} ${(data.location as { address_line2?: string })?.address_line2 || ''}`.trim()
     } as unknown as Event;
 }
 
@@ -270,10 +270,10 @@ export async function getPublicEventById(id: string): Promise<Event | null> {
     if (!data) return null;
 
     return {
-        ...data,
-        city: (data.location as any)?.city,
-        venue_name: (data.location as any)?.venue_name,
-        full_address: `${(data.location as any)?.address_line1 || ''} ${(data.location as any)?.address_line2 || ''}`.trim()
+      ...data,
+      city: (data.location as { city?: string })?.city,
+      venue_name: (data.location as { venue_name?: string })?.venue_name,
+      full_address: `${(data.location as { address_line1?: string })?.address_line1 || ''} ${(data.location as { address_line2?: string })?.address_line2 || ''}`.trim()
     } as unknown as Event;
 }
 
@@ -309,10 +309,10 @@ export async function getPublicEventBySlug(slug: string): Promise<Event | null> 
     if (!data) return null;
 
     return {
-        ...data,
-        city: (data.location as any)?.city,
-        venue_name: (data.location as any)?.venue_name,
-        full_address: `${(data.location as any)?.address_line1 || ''} ${(data.location as any)?.address_line2 || ''}`.trim()
+      ...data,
+      city: (data.location as { city?: string })?.city,
+      venue_name: (data.location as { venue_name?: string })?.venue_name,
+      full_address: `${(data.location as { address_line1?: string })?.address_line1 || ''} ${(data.location as { address_line2?: string })?.address_line2 || ''}`.trim()
     } as unknown as Event;
 }
 

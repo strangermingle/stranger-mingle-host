@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Plus, MapPin, Search, Loader2, Globe, ArrowRight } from 'lucide-react'
 import { getLocationsAction } from '@/actions/location.actions'
 import { Button, Input } from '@/components/ui'
-import LocationForm from '@/components/events/LocationForm'
+import LocationForm from '@/components/dashboard/events/LocationForm'
 
 interface Location {
   id: string
