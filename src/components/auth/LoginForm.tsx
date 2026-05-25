@@ -9,6 +9,7 @@ import { sendGAEvent } from '@/lib/gtag'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Loader2, Lock, Mail } from 'lucide-react'
+import { PasswordInput } from '@/components/ui/password-input'
 
 export function LoginForm() {
   const [isMounted, setIsMounted] = useState(false)
@@ -136,17 +137,14 @@ export function LoginForm() {
               Forgot?
             </Link>
           </div>
-          <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-            <input
-              {...register('password')}
-              id="password"
-              type="password"
-              className="flex h-12 w-full rounded-xl border border-gray-200 bg-gray-50/50 pl-11 pr-4 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white transition-all"
-              placeholder="••••••••"
-              disabled={isLoading}
-            />
-          </div>
+          <PasswordInput
+            {...register('password')}
+            id="password"
+            leftIcon={<Lock className="w-4 h-4 text-gray-300" />}
+            className="flex h-12 w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white transition-all"
+            placeholder="••••••••"
+            disabled={isLoading}
+          />
           {errors.password && (
             <p className="text-xs text-red-500 font-medium ml-1">
               {errors.password.message}

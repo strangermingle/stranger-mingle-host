@@ -13,7 +13,8 @@ export async function getUserById(id: string): Promise<User | null> {
       is_verified, is_active, is_suspended, suspension_reason,
       suspended_until, email_verified_at, last_login_at, login_count,
       preferred_language, preferred_currency, timezone,
-      notification_prefs, privacy_settings, created_at, updated_at
+      notification_prefs, privacy_settings, created_at, updated_at,
+      group_uuid
     `
     )
     .eq('id', id)
@@ -77,7 +78,8 @@ export async function updateUser(id: string, userData: UserUpdate): Promise<User
       is_verified, is_active, is_suspended, suspension_reason,
       suspended_until, email_verified_at, last_login_at, login_count,
       preferred_language, preferred_currency, timezone,
-      notification_prefs, privacy_settings, created_at, updated_at
+      notification_prefs, privacy_settings, created_at, updated_at,
+      group_uuid
     `
     )
     .single()

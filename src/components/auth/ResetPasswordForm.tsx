@@ -7,6 +7,7 @@ import { resetPasswordSchema, ResetPasswordInput } from '@/lib/validations/auth.
 import { updatePasswordAction } from '@/actions/auth.actions'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { PasswordInput } from '@/components/ui/password-input'
 
 export function ResetPasswordForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -49,10 +50,9 @@ export function ResetPasswordForm() {
           >
             New Password
           </label>
-          <input
+          <PasswordInput
             {...register('password')}
             id="password"
-            type="password"
             className="flex h-10 w-full rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:border-zinc-700 dark:text-gray-50 dark:focus:ring-indigo-400"
             placeholder="••••••••"
             disabled={isLoading}
@@ -71,10 +71,9 @@ export function ResetPasswordForm() {
           >
             Confirm New Password
           </label>
-          <input
+          <PasswordInput
             {...register('confirmPassword')}
             id="confirmPassword"
-            type="password"
             className="flex h-10 w-full rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:border-zinc-700 dark:text-gray-50 dark:focus:ring-indigo-400"
             placeholder="••••••••"
             disabled={isLoading}

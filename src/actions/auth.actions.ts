@@ -12,7 +12,7 @@ import {
 import { supabaseAdmin } from '../lib/supabase/admin'
 import crypto from 'crypto'
 import { resend } from '../lib/resend'
-import { env } from '../lib/env'
+import { getPasswordResetRedirectTo } from '../lib/auth-origin'
 
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex')
@@ -155,14 +155,26 @@ export async function forgotPasswordAction(formData: FormData) {
       .single()
 
     if (user) {
+      // Ensure the user exists in auth.users with the correct ID matching public.users
+      await supabaseAdmin.rpc('provision_host_auth_user', {
+        target_email: email,
+        target_id: user.id,
+      })
+
+      const redirectTo = await getPasswordResetRedirectTo()
+
       // 2. Generate recovery link via Admin Auth API
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'recovery',
         email: email,
         options: {
-          redirectTo: `${env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/reset-password`,
+          redirectTo,
         }
       })
+
+      if (linkError) {
+        console.error('forgotPasswordAction generateLink error:', linkError.message)
+      }
 
       if (!linkError && linkData?.properties?.action_link) {
         // 3. Send email via Resend

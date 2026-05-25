@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { registerSchema, RegisterInput } from '@/lib/validations/auth.schemas'
 import { registerAction, checkUsernameAction } from '@/actions/auth.actions'
 import Link from 'next/link'
+import { PasswordInput } from '@/components/ui/password-input'
 
 function getPasswordStrength(password: string) {
   let score = 0
@@ -162,10 +163,9 @@ export function RegisterForm() {
           <label htmlFor="password" className="text-sm font-medium leading-none text-gray-700">
             Password
           </label>
-          <input
+          <PasswordInput
             {...register('password')}
             id="password"
-            type="password"
             className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             disabled={isLoading || !!successMsg}
           />
@@ -184,10 +184,9 @@ export function RegisterForm() {
           <label htmlFor="confirmPassword" className="text-sm font-medium leading-none text-gray-700">
             Confirm Password
           </label>
-          <input
+          <PasswordInput
             {...register('confirmPassword')}
             id="confirmPassword"
-            type="password"
             className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             disabled={isLoading || !!successMsg}
           />

@@ -466,9 +466,10 @@ export type Database = {
           id: string
           message: string | null
           name: string
-          phone: string
+          phone: string | null
           source: string | null
           subject: string | null
+          submission_type: string | null
         }
         Insert: {
           city?: string | null
@@ -477,9 +478,10 @@ export type Database = {
           id?: string
           message?: string | null
           name: string
-          phone: string
+          phone?: string | null
           source?: string | null
           subject?: string | null
+          submission_type?: string | null
         }
         Update: {
           city?: string | null
@@ -488,9 +490,10 @@ export type Database = {
           id?: string
           message?: string | null
           name?: string
-          phone?: string
+          phone?: string | null
           source?: string | null
           subject?: string | null
+          submission_type?: string | null
         }
         Relationships: []
       }
@@ -1478,6 +1481,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "events_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "v_events_public"
+            referencedColumns: ["location_id"]
+          },
+          {
             foreignKeyName: "events_parent_event_id_fkey"
             columns: ["parent_event_id"]
             isOneToOne: false
@@ -1560,6 +1570,110 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "v_events_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          created_at: string | null
+          group_id: string | null
+          id: string
+          role: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          group_id?: string | null
+          id?: string
+          role?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          group_id?: string | null
+          id?: string
+          role?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          location_id: string | null
+          name: string
+          owner_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location_id?: string | null
+          name: string
+          owner_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location_id?: string | null
+          name?: string
+          owner_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "groups_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "groups_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "v_events_public"
+            referencedColumns: ["location_id"]
+          },
+          {
+            foreignKeyName: "groups_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -2901,6 +3015,83 @@ export type Database = {
           },
         ]
       }
+      user_subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean | null
+          cancel_reason: string | null
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          email_verified_at: string | null
+          id: string
+          is_verified: boolean | null
+          notes: Json | null
+          razorpay_customer_id: string | null
+          razorpay_payment_id: string | null
+          razorpay_plan_id: string | null
+          razorpay_subscription_id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+          verification_token: string | null
+        }
+        Insert: {
+          cancel_at_period_end?: boolean | null
+          cancel_reason?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          email_verified_at?: string | null
+          id?: string
+          is_verified?: boolean | null
+          notes?: Json | null
+          razorpay_customer_id?: string | null
+          razorpay_payment_id?: string | null
+          razorpay_plan_id?: string | null
+          razorpay_subscription_id: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          verification_token?: string | null
+        }
+        Update: {
+          cancel_at_period_end?: boolean | null
+          cancel_reason?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          email_verified_at?: string | null
+          id?: string
+          is_verified?: boolean | null
+          notes?: Json | null
+          razorpay_customer_id?: string | null
+          razorpay_payment_id?: string | null
+          razorpay_plan_id?: string | null
+          razorpay_subscription_id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          verification_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_tokens: {
         Row: {
           created_at: string | null
@@ -2949,6 +3140,7 @@ export type Database = {
           email: string
           email_verified_at: string | null
           gender: string | null
+          group_uuid: string | null
           id: string
           is_active: boolean | null
           is_suspended: boolean | null
@@ -2978,6 +3170,7 @@ export type Database = {
           email: string
           email_verified_at?: string | null
           gender?: string | null
+          group_uuid?: string | null
           id?: string
           is_active?: boolean | null
           is_suspended?: boolean | null
@@ -3007,6 +3200,7 @@ export type Database = {
           email?: string
           email_verified_at?: string | null
           gender?: string | null
+          group_uuid?: string | null
           id?: string
           is_active?: boolean | null
           is_suspended?: boolean | null
@@ -3027,12 +3221,85 @@ export type Database = {
           updated_at?: string | null
           username?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "users_group_uuid_fkey"
+            columns: ["group_uuid"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_partners: {
+        Row: {
+          amenities: Json | null
+          contact_email: string | null
+          contact_phone: string | null
+          cover_image_url: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          location_id: string | null
+          rating_avg: number | null
+          rating_count: number | null
+          updated_at: string | null
+          website_url: string | null
+        }
+        Insert: {
+          amenities?: Json | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location_id?: string | null
+          rating_avg?: number | null
+          rating_count?: number | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          amenities?: Json | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location_id?: string | null
+          rating_avg?: number | null
+          rating_count?: number | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_partners_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: true
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venue_partners_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: true
+            referencedRelation: "v_events_public"
+            referencedColumns: ["location_id"]
+          },
+        ]
       }
     }
     Views: {
       v_events_public: {
         Row: {
+          address_line1: string | null
+          address_line2: string | null
           booking_count: number | null
           category_color: string | null
           category_name: string | null
@@ -3040,10 +3307,12 @@ export type Database = {
           city: string | null
           country: string | null
           cover_image_url: string | null
+          created_at: string | null
           description: string | null
           end_datetime: string | null
           event_type: string | null
           fts: unknown
+          google_maps_url: string | null
           host_alias: string | null
           host_display_name: string | null
           host_logo: string | null
@@ -3054,10 +3323,18 @@ export type Database = {
           is_featured: boolean | null
           is_recurring: boolean | null
           is_sponsored: boolean | null
+          latitude: number | null
           likes_count: number | null
+          location_id: string | null
+          longitude: number | null
           max_capacity: number | null
           max_price: number | null
+          meta_description: string | null
+          meta_title: string | null
           min_price: number | null
+          place_id: string | null
+          postal_code: string | null
+          reviews_count: number | null
           short_description: string | null
           slug: string | null
           start_datetime: string | null
@@ -3066,6 +3343,7 @@ export type Database = {
           ticketing_mode: string | null
           timezone: string | null
           title: string | null
+          updated_at: string | null
           venue_name: string | null
           views_count: number | null
         }
@@ -3244,6 +3522,10 @@ export type Database = {
           r_was_already_on_list: boolean
         }[]
       }
+      provision_host_auth_user: {
+        Args: { target_email: string; target_id: string }
+        Returns: undefined
+      }
       release_expired_locks_for_event: {
         Args: { p_event_id: string }
         Returns: undefined
@@ -3265,6 +3547,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      sync_host_auth_id: {
+        Args: { target_email: string; target_id: string }
+        Returns: undefined
       }
       toggle_event_like: {
         Args: { p_event_id: string; p_user_id: string }

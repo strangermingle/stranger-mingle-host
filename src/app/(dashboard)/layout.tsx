@@ -22,6 +22,29 @@ export default async function DashboardLayout({
   let dbUser = await getUserWithHostProfile(user.id)
 
   if (!dbUser) {
+    // Check if the user exists in public.users by email (indicating ID mismatch)
+    if (user.email) {
+      const { data: emailUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', user.email)
+        .maybeSingle()
+
+      if (emailUser && emailUser.id !== user.id) {
+        // Trigger self-healing RPC to align auth.users.id with public.users.id
+        await supabaseAdmin.rpc('sync_host_auth_id', {
+          target_email: user.email,
+          target_id: emailUser.id,
+        })
+        
+        // Log out the current session since the user ID changed
+        await supabase.auth.signOut()
+        
+        // Redirect to login page asking them to sign in again to obtain a fresh token with correct ID.
+        redirect('/login?message=Authentication synchronized. Please log in again.')
+      }
+    }
+
     // Auto-create user row if missing (e.g. from OAuth or failed signup hook)
     const { error: insertError } = await supabaseAdmin.from('users').insert({
       id: user.id,
