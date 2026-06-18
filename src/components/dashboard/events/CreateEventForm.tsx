@@ -278,6 +278,30 @@ export default function EventCreateForm({ categories, hostProfiles, initialData:
     }
   }, [formData.ticket_tiers, formData.max_capacity])
 
+  // Sync timing state to formData
+  useEffect(() => {
+    let start_datetime = formData.start_datetime;
+    if (timing.startDate && timing.startTime) {
+      try {
+        start_datetime = new Date(`${timing.startDate}T${timing.startTime}`).toISOString()
+      } catch (e) {}
+    }
+    
+    let end_datetime = formData.end_datetime;
+    if (timing.endDate && timing.endTime) {
+      try {
+        end_datetime = new Date(`${timing.endDate}T${timing.endTime}`).toISOString()
+      } catch (e) {}
+    }
+
+    setFormData(prev => {
+      if (prev.start_datetime !== start_datetime || prev.end_datetime !== end_datetime) {
+        return { ...prev, start_datetime, end_datetime }
+      }
+      return prev
+    })
+  }, [timing.startDate, timing.startTime, timing.endDate, timing.endTime])
+
   // Fetch Tags and Hosts
   useEffect(() => {
     async function fetchData() {
@@ -488,6 +512,18 @@ export default function EventCreateForm({ categories, hostProfiles, initialData:
     }))
   }
 
+  const preparePayload = (status: string) => {
+    const payload = { ...formData, status }
+    if (payload.location) {
+      payload.location = {
+        ...payload.location,
+        latitude: payload.location.latitude ? Number(payload.location.latitude) : null,
+        longitude: payload.location.longitude ? Number(payload.location.longitude) : null,
+      } as any;
+    }
+    return payload
+  }
+
   const handleSaveDraft = async (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault()
@@ -499,7 +535,7 @@ export default function EventCreateForm({ categories, hostProfiles, initialData:
     }
     setLoadingDraft(true)
     const submissionData = new FormData()
-    submissionData.append('data', JSON.stringify({ ...formData, status: 'draft' }))
+    submissionData.append('data', JSON.stringify(preparePayload('draft')))
     
     try {
       const result = eventId 
@@ -537,7 +573,7 @@ export default function EventCreateForm({ categories, hostProfiles, initialData:
     try {
       const targetStatus = initialData?.creation_fee_paid ? 'published' : 'draft'
       const submissionData = new FormData()
-      submissionData.append('data', JSON.stringify({ ...formData, status: targetStatus }))
+      submissionData.append('data', JSON.stringify(preparePayload(targetStatus)))
       
       const result = eventId 
         ? await updateEventAction(eventId, submissionData)
