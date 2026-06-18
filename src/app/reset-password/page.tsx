@@ -15,6 +15,7 @@ export default async function ResetPasswordPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
+    console.log('redicre ')
     redirect('/forgot-password?error=reset-link-expired')
   }
 

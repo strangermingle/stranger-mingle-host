@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { forgotPasswordSchema, ForgotPasswordInput } from '@/lib/validations/auth.schemas'
@@ -10,6 +10,9 @@ import Link from 'next/link'
 export function ForgotPasswordForm() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  useEffect(() => {
+    console.log('sdf')
+  }, [])
 
   const {
     register,
@@ -23,16 +26,17 @@ export function ForgotPasswordForm() {
   async function onSubmit(data: ForgotPasswordInput) {
     setIsLoading(true)
     setSuccessMsg(null)
-
+    console.log('reaching here')
     const formData = new FormData()
     formData.append('email', data.email)
 
     const result = await forgotPasswordAction(formData)
+    console.log('result ', result)
 
     if (result?.success) {
       setSuccessMsg("If your email exists in our system, you will receive a password reset link shortly.")
     }
-    
+
     setIsLoading(false)
   }
 

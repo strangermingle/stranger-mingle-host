@@ -19,7 +19,7 @@ export default function LoginPage() {
 
         <div className="relative z-10 max-w-md px-12 space-y-8">
           <div className="flex items-center gap-4 mb-12">
-            <Image src="/logo-2.svg" alt="Stranger Mingle" width={200} height={50} className="brightness-0 invert" />
+            <Image src="/logo-2.svg" alt="Stranger Mingle" width={200} height={50} className="brightness-0 invert" style={{ width: 'auto', height: 'auto' }} priority />
           </div>
           <h2 className="text-4xl font-black text-white leading-tight tracking-tight">
             Host<br />
@@ -53,7 +53,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile logo */}
           <div className="lg:hidden flex justify-center mb-4">
-            <Image src="/logo-2.svg" alt="Stranger Mingle" width={180} height={45} />
+            <Image src="/logo-2.svg" alt="Stranger Mingle" width={180} height={45} style={{ width: 'auto', height: 'auto' }} priority />
           </div>
 
           <div className="text-center space-y-2">

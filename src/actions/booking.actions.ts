@@ -571,7 +571,7 @@ export async function cancelBookingAction(bookingRef: string): Promise<{ success
         .eq('booking_id', typedBooking.id)
 
       if (items && items.length > 0) {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3001')
         
         for (const item of (items as any[])) {
           await fetch(`${baseUrl}/api/waitlist/process`, {

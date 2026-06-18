@@ -12,7 +12,7 @@ import {
 import { supabaseAdmin } from '../lib/supabase/admin'
 import crypto from 'crypto'
 import { resend } from '../lib/resend'
-import { getPasswordResetRedirectTo } from '../lib/auth-origin'
+import { getPasswordResetRedirectTo, getAuthCallbackOrigin } from '../lib/auth-origin'
 
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex')
@@ -21,6 +21,7 @@ function hashPassword(password: string): string {
 }
 
 export async function loginAction(formData: FormData) {
+  console.log('login action reached')
   const data = Object.fromEntries(formData.entries())
   const parsed = loginSchema.safeParse(data)
 
@@ -65,21 +66,21 @@ export async function registerAction(formData: FormData) {
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '')
     .slice(0, 30)
-  
+
   if (!username) username = 'user'
 
   // Check uniqueness and append random numbers if needed
   let isUnique = false
   let finalUsername = username
   let attempts = 0
-  
+
   while (!isUnique && attempts < 10) {
     const { data: existing } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('username', finalUsername)
       .single()
-    
+
     if (!existing) {
       isUnique = true
     } else {
@@ -108,7 +109,7 @@ export async function registerAction(formData: FormData) {
 
   // 4. Insert into our custom public.users table
   const password_hash = hashPassword(password)
-  
+
   const { error: insertError } = await supabaseAdmin.from('users').insert({
     id: authData.user.id,
     username: finalUsername,
@@ -167,6 +168,8 @@ export async function forgotPasswordAction(formData: FormData) {
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'recovery',
         email: email,
+        // options: { redirectTo } is no longer strictly needed if we construct our own URL,
+        // but it doesn't hurt to keep it.
         options: {
           redirectTo,
         }
@@ -176,7 +179,27 @@ export async function forgotPasswordAction(formData: FormData) {
         console.error('forgotPasswordAction generateLink error:', linkError.message)
       }
 
-      if (!linkError && linkData?.properties?.action_link) {
+      console.log('forgotPasswordAction linkData:', JSON.stringify(linkData, null, 2))
+
+      const actionLink = linkData?.properties?.action_link
+      let tokenHash = linkData?.properties?.hashed_token
+      
+      // Fallback: extract token from action_link if hashed_token is not present
+      if (!tokenHash && actionLink) {
+        try {
+          const urlObj = new URL(actionLink)
+          tokenHash = urlObj.searchParams.get('token') || urlObj.searchParams.get('token_hash') || undefined
+        } catch (e) {
+          console.error('Failed to parse action_link for token', e)
+        }
+      }
+
+      if (!linkError && tokenHash) {
+        // Construct a direct URL to our app's confirm route, bypassing Supabase redirects
+        const origin = await getAuthCallbackOrigin()
+        const confirmUrl = `${origin}/auth/confirm?token_hash=${tokenHash}&type=recovery&next=/reset-password`
+        console.log('Constructed confirmUrl:', confirmUrl)
+
         // 3. Send email via Resend
         await resend.emails.send({
           from: 'Stranger Mingle <team@strangermingle.com>',
@@ -195,7 +218,7 @@ export async function forgotPasswordAction(formData: FormData) {
                 </p>
                 
                 <div style="margin-top: 40px; text-align: center;">
-                  <a href="${linkData.properties.action_link}" style="background-color: #6366f1; color: #ffffff; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);">
+                  <a href="${confirmUrl}" style="background-color: #6366f1; color: #ffffff; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);">
                     Set New Password
                   </a>
                 </div>
