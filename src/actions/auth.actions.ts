@@ -152,7 +152,7 @@ export async function forgotPasswordAction(formData: FormData) {
     const { data: user } = await supabaseAdmin
       .from('users')
       .select('id')
-      .eq('email', email)
+      .ilike('email', email)
       .single()
 
     if (user) {

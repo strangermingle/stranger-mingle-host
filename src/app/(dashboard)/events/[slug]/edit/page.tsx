@@ -55,7 +55,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ slug
         categories={categories || []} 
         hostProfiles={hostProfiles || []} 
         initialData={event}
-        eventId={slug}
+        eventId={event.id}
       />
     </div>
   )
