@@ -349,6 +349,7 @@ export default function EventCreateForm({ categories, hostProfiles, initialData:
     setUploading(field)
     const uploadData = new FormData()
     uploadData.append('file', file)
+    uploadData.append('type', field === 'vertical_poster_url' ? 'vertical' : 'landscape')
     const res = await uploadImageAction(eventId || 'new-event', uploadData, field === 'vertical_poster_url' ? 'vertical' : 'landscape')
     setUploading(null)
     if (res.success && res.url) {

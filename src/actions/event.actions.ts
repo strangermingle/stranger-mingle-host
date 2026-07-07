@@ -352,7 +352,7 @@ import { uploadToCloudinary, deleteFromCloudinary } from '@/lib/cloudinary'
 export async function uploadImageAction(
   id: string, 
   formData: FormData, 
-  type: 'landscape' | 'vertical' | 'profile' | 'logo' = 'landscape'
+  type?: 'landscape' | 'vertical' | 'profile' | 'logo'
 ) {
   const file = formData.get('file') as File
   if (!file) return { error: 'No file provided' }
@@ -369,22 +369,24 @@ export async function uploadImageAction(
     if (!hostProfile || hostProfile.user_id !== user.id) return { error: 'Unauthorized' }
   }
 
+  const resolvedType = (formData.get('type') as 'landscape' | 'vertical' | 'profile' | 'logo') || type || 'landscape'
+
   try {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
     
     let folderName = env.CLOUDINARY_FOLDER_LANDSCAPE
-    if (type === 'vertical') folderName = env.CLOUDINARY_FOLDER_VERTICAL
-    else if (type === 'profile') folderName = env.CLOUDINARY_FOLDER_PROFILE
-    else if (type === 'logo') folderName = env.CLOUDINARY_FOLDER_LOGO
+    if (resolvedType === 'vertical') folderName = env.CLOUDINARY_FOLDER_VERTICAL
+    else if (resolvedType === 'profile') folderName = env.CLOUDINARY_FOLDER_PROFILE
+    else if (resolvedType === 'logo') folderName = env.CLOUDINARY_FOLDER_LOGO
  
     const folder = id === 'new-event' || id === 'new-host' ? `${folderName}/pending` : `${folderName}/${id}`
     const result = await uploadToCloudinary(buffer, folder)
     
     const publicUrl = result.secure_url
 
-    if (type === 'landscape' || type === 'vertical') {
-      const isLandscape = type === 'landscape'
+    if (resolvedType === 'landscape' || resolvedType === 'vertical') {
+      const isLandscape = resolvedType === 'landscape'
       
       const { data: imageData, error: insertError } = await supabase.from('event_images')
         .insert({
