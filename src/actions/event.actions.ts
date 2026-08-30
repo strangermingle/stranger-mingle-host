@@ -122,22 +122,74 @@ export async function createEventAction(formData: FormData) {
     }).eq('id', createdEventId)
 
     if (validated.cover_image_url) {
-      await supabase.from('event_images').insert({
-        event_id: createdEventId,
-        image_url: validated.cover_image_url,
-        alt_text: validated.cover_image_alt || null,
-        is_cover: true,
-        sort_order: 0
-      })
+      const { data: existingCover } = await supabase.from('event_images')
+        .select('id')
+        .match({ event_id: createdEventId, is_cover: true })
+        .maybeSingle()
+      if (existingCover) {
+        await supabase.from('event_images').update({
+          image_url: validated.cover_image_url,
+          alt_text: validated.cover_image_alt || null,
+        }).eq('id', existingCover.id)
+      } else {
+        await supabase.from('event_images').insert({
+          event_id: createdEventId,
+          image_url: validated.cover_image_url,
+          alt_text: validated.cover_image_alt || null,
+          is_cover: true,
+          sort_order: 0
+        })
+      }
     }
+
     if (validated.vertical_poster_url) {
-      await supabase.from('event_images').insert({
-        event_id: createdEventId,
-        image_url: validated.vertical_poster_url,
-        alt_text: validated.vertical_poster_alt || null,
-        is_cover: false,
-        sort_order: 1
-      })
+      const { data: existingPoster } = await supabase.from('event_images')
+        .select('id')
+        .match({ event_id: createdEventId, is_cover: false })
+        .maybeSingle()
+      if (existingPoster) {
+        await supabase.from('event_images').update({
+          image_url: validated.vertical_poster_url,
+          alt_text: validated.vertical_poster_alt || null,
+        }).eq('id', existingPoster.id)
+      } else {
+        await supabase.from('event_images').insert({
+          event_id: createdEventId,
+          image_url: validated.vertical_poster_url,
+          alt_text: validated.vertical_poster_alt || null,
+          is_cover: false,
+          sort_order: 1
+        })
+      }
+    }
+
+    // Explicitly sync ticket tiers dates to database
+    if (validated.ticket_tiers && validated.ticket_tiers.length > 0) {
+      const { data: existingTiers } = await supabase.from('ticket_tiers')
+        .select('id, name')
+        .eq('event_id', createdEventId)
+
+      for (let i = 0; i < validated.ticket_tiers.length; i++) {
+        const tierInput = validated.ticket_tiers[i]
+        const existingTier = existingTiers?.[i] || existingTiers?.find(t => t.name === tierInput.name)
+        const tierData = {
+          name: tierInput.name,
+          description: tierInput.description || null,
+          tier_type: tierInput.tier_type,
+          price: tierInput.price,
+          total_quantity: tierInput.total_quantity,
+          max_per_booking: tierInput.max_per_booking,
+          sale_start_at: tierInput.sale_start_at ? new Date(tierInput.sale_start_at).toISOString() : null,
+          sale_end_at: tierInput.sale_end_at ? new Date(tierInput.sale_end_at).toISOString() : null,
+          perks: tierInput.perks || [],
+          is_active: true,
+        }
+        if (existingTier?.id) {
+          await supabase.from('ticket_tiers').update(tierData).eq('id', existingTier.id)
+        } else {
+          await supabase.from('ticket_tiers').insert({ ...tierData, event_id: createdEventId })
+        }
+      }
     }
 
     revalidatePath('/events/published')
@@ -305,8 +357,8 @@ export async function updateEventAction(eventId: string, formData: FormData) {
       const tierIdsToDelete = existingTierIds.filter(id => !incomingTierIds.includes(id))
 
       if (validated.ticket_tiers.length > 0) {
-        await supabase.from('ticket_tiers').upsert(
-          validated.ticket_tiers.map(t => ({
+        for (const t of validated.ticket_tiers) {
+          const tierPayload = {
             id: t.id,
             event_id: eventId,
             name: t.name,
@@ -315,13 +367,17 @@ export async function updateEventAction(eventId: string, formData: FormData) {
             price: t.price,
             total_quantity: t.total_quantity,
             max_per_booking: t.max_per_booking,
-            sale_start_at: t.sale_start_at || null,
-            sale_end_at: t.sale_end_at || null,
+            sale_start_at: t.sale_start_at ? new Date(t.sale_start_at).toISOString() : null,
+            sale_end_at: t.sale_end_at ? new Date(t.sale_end_at).toISOString() : null,
             perks: t.perks || [],
             is_active: true,
-          })),
-          { onConflict: 'id' }
-        )
+          }
+          if (t.id) {
+            await supabase.from('ticket_tiers').upsert(tierPayload, { onConflict: 'id' })
+          } else {
+            await supabase.from('ticket_tiers').insert(tierPayload)
+          }
+        }
       }
 
       if (tierIdsToDelete.length > 0) {
@@ -362,16 +418,46 @@ export async function updateEventAction(eventId: string, formData: FormData) {
       }
     }
 
-    // Sync alt_text to event_images
+    // Sync images to event_images table
     if (validated.cover_image_url) {
-       await supabase.from('event_images')
-         .update({ alt_text: validated.cover_image_alt || null })
-         .match({ event_id: eventId, image_url: validated.cover_image_url })
+      const { data: existingCover } = await supabase.from('event_images')
+        .select('id')
+        .match({ event_id: eventId, is_cover: true })
+        .maybeSingle()
+      if (existingCover) {
+        await supabase.from('event_images').update({
+          image_url: validated.cover_image_url,
+          alt_text: validated.cover_image_alt || null
+        }).eq('id', existingCover.id)
+      } else {
+        await supabase.from('event_images').insert({
+          event_id: eventId,
+          image_url: validated.cover_image_url,
+          alt_text: validated.cover_image_alt || null,
+          is_cover: true,
+          sort_order: 0
+        })
+      }
     }
     if (validated.vertical_poster_url) {
-       await supabase.from('event_images')
-         .update({ alt_text: validated.vertical_poster_alt || null })
-         .match({ event_id: eventId, image_url: validated.vertical_poster_url })
+      const { data: existingPoster } = await supabase.from('event_images')
+        .select('id')
+        .match({ event_id: eventId, is_cover: false })
+        .maybeSingle()
+      if (existingPoster) {
+        await supabase.from('event_images').update({
+          image_url: validated.vertical_poster_url,
+          alt_text: validated.vertical_poster_alt || null
+        }).eq('id', existingPoster.id)
+      } else {
+        await supabase.from('event_images').insert({
+          event_id: eventId,
+          image_url: validated.vertical_poster_url,
+          alt_text: validated.vertical_poster_alt || null,
+          is_cover: false,
+          sort_order: 1
+        })
+      }
     }
 
     revalidatePath('/')
@@ -664,6 +750,7 @@ export async function getEventDetailsAction(eventIdOrSlug: string) {
   const query = supabase.from('events')
     .select(`
       *,
+      event_images(*),
       ticket_tiers(*),
       agenda:event_agenda(*),
       faqs:event_faqs(*),
@@ -681,5 +768,18 @@ export async function getEventDetailsAction(eventIdOrSlug: string) {
   const { data, error } = await query.single()
   
   if (error) return { error: error.message }
+
+  // Fallback resolution for images
+  if (data) {
+    if (!data.vertical_poster_url && data.event_images) {
+      const posterImg = data.event_images.find((img: { is_cover: boolean | null; image_url: string }) => img.is_cover === false)
+      if (posterImg) data.vertical_poster_url = posterImg.image_url
+    }
+    if (!data.cover_image_url && data.event_images) {
+      const coverImg = data.event_images.find((img: { is_cover: boolean | null; image_url: string }) => img.is_cover === true)
+      if (coverImg) data.cover_image_url = coverImg.image_url
+    }
+  }
+
   return { success: true, event: data }
 }
