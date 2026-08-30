@@ -242,8 +242,8 @@ export async function updateEventAction(eventId: string, formData: FormData) {
             event_id: eventId,
             title: item.title,
             description: item.description || null,
-            starts_at: item.start_time,
-            ends_at: item.end_time,
+            starts_at: item.start_time || null,
+            ends_at: item.end_time || null,
             sort_order: idx
           }))
         )

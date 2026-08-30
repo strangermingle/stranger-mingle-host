@@ -53,19 +53,52 @@ export default async function MyEarningsPage() {
     bookings = data || []
   }
 
-  // Calculate aggregates
-  const totalRevenue = bookings.reduce((sum: number, b: any) => sum + Number(b.total_amount || 0), 0)
-  const totalHostEarnings = bookings.reduce((sum: number, b: any) => sum + Number(b.host_payout || 0), 0)
-  const totalPlatformFees = bookings.reduce((sum: number, b: any) => sum + Number(b.platform_fee || 0), 0)
-  const totalGST = bookings.reduce((sum: number, b: any) => sum + Number(b.gst_on_fee || 0), 0)
-  const totalDiscounts = bookings.reduce((sum: number, b: any) => sum + Number(b.discount_amount || 0), 0)
+  const platformFeePct = platformConfig?.platform_fee_pct || 10;
+  const gstRatePct = platformConfig?.gst_rate_pct || 18;
+
+  // Calculate aggregates dynamically
+  let totalRevenue = 0;
+  let totalHostEarnings = 0;
+  let totalPlatformFees = 0;
+  let totalGST = 0;
+  let totalDiscounts = 0;
+
+  bookings.forEach((b: any) => {
+    const amount = Number(b.total_amount || 0);
+    const taxable = Number(b.taxable_amount || b.subtotal || amount);
+    
+    // Calculate dynamically
+    const fee = taxable * (platformFeePct / 100);
+    const gst = fee * (gstRatePct / 100);
+    const payout = amount - fee - gst;
+
+    totalRevenue += amount;
+    totalPlatformFees += fee;
+    totalGST += gst;
+    totalHostEarnings += payout;
+    totalDiscounts += Number(b.discount_amount || 0);
+  });
 
   // Per-event breakdown
   const eventBreakdown = events.map((event: any) => {
     const eventBookings = bookings.filter((b: any) => b.event_id === event.id)
-    const revenue = eventBookings.reduce((s: number, b: any) => s + Number(b.total_amount || 0), 0)
-    const earnings = eventBookings.reduce((s: number, b: any) => s + Number(b.host_payout || 0), 0)
-    const fees = eventBookings.reduce((s: number, b: any) => s + Number(b.platform_fee || 0), 0)
+    
+    let revenue = 0;
+    let earnings = 0;
+    let fees = 0;
+
+    eventBookings.forEach((b: any) => {
+      const amount = Number(b.total_amount || 0);
+      const taxable = Number(b.taxable_amount || b.subtotal || amount);
+      const fee = taxable * (platformFeePct / 100);
+      const gst = fee * (gstRatePct / 100);
+      const payout = amount - fee - gst;
+
+      revenue += amount;
+      fees += fee;
+      earnings += payout;
+    });
+
     return {
       ...event,
       bookingCount: eventBookings.length,
@@ -231,12 +264,19 @@ export default async function MyEarningsPage() {
                 </tr>
               </thead>
               <tbody>
-                {bookings.slice(0, 20).map((b: any) => (
+                {bookings.slice(0, 20).map((b: any) => {
+                  const amount = Number(b.total_amount || 0);
+                  const taxable = Number(b.taxable_amount || b.subtotal || amount);
+                  const fee = taxable * (platformFeePct / 100);
+                  const gst = fee * (gstRatePct / 100);
+                  const payout = amount - fee - gst;
+
+                  return (
                   <tr key={b.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-3 text-xs font-mono font-bold text-gray-600 truncate max-w-[120px]">{b.id.slice(0, 8)}...</td>
-                    <td className="px-6 py-3 text-sm font-bold text-gray-800">₹{Number(b.total_amount).toLocaleString('en-IN')}</td>
-                    <td className="px-6 py-3 text-sm font-bold text-red-500">-₹{Number(b.platform_fee).toLocaleString('en-IN')}</td>
-                    <td className="px-6 py-3 text-sm font-black text-green-700">₹{Number(b.host_payout).toLocaleString('en-IN')}</td>
+                    <td className="px-6 py-3 text-sm font-bold text-gray-800">₹{amount.toLocaleString('en-IN')}</td>
+                    <td className="px-6 py-3 text-sm font-bold text-red-500">-₹{fee.toLocaleString('en-IN')}</td>
+                    <td className="px-6 py-3 text-sm font-black text-green-700">₹{payout.toLocaleString('en-IN')}</td>
                     <td className="px-6 py-3 text-sm font-bold text-orange-500">
                       {Number(b.discount_amount) > 0 ? `-₹${Number(b.discount_amount).toLocaleString('en-IN')}` : '—'}
                     </td>
@@ -244,7 +284,7 @@ export default async function MyEarningsPage() {
                       {b.created_at ? format(new Date(b.created_at), 'dd MMM yyyy') : '—'}
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
