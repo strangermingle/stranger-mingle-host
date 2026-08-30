@@ -50,11 +50,20 @@ interface HostProfile {
   display_name: string
 }
 
+interface PlatformConfig {
+  gst_rate_pct: number
+  platform_fee_pct: number
+  max_tickets_per_booking: number
+  currency_default: string
+  waitlist_enabled: boolean
+}
+
 interface EventCreateFormProps {
   categories: Category[]
   hostProfiles: HostProfile[]
   initialData?: Record<string, unknown>
   eventId?: string
+  platformConfig?: PlatformConfig
 }
 
 interface TicketTier {
@@ -178,7 +187,7 @@ interface InitialEventData {
   creation_fee_paid?: boolean;
 }
 
-export default function EventCreateForm({ categories, hostProfiles, initialData: rawInitialData, eventId }: EventCreateFormProps) {
+export default function EventCreateForm({ categories, hostProfiles, initialData: rawInitialData, eventId, platformConfig }: EventCreateFormProps) {
   const initialData = rawInitialData as InitialEventData | undefined;
   const router = useRouter()
   const [loadingPublish, setLoadingPublish] = useState(false)
@@ -529,10 +538,6 @@ export default function EventCreateForm({ categories, hostProfiles, initialData:
     if (e) {
       e.preventDefault()
       e.stopPropagation()
-    }
-    if (!formData.start_datetime || !formData.end_datetime) {
-      toast.error('Set date & time')
-      return
     }
     setLoadingDraft(true)
     const submissionData = new FormData()
@@ -1394,6 +1399,22 @@ export default function EventCreateForm({ categories, hostProfiles, initialData:
                           onChange={(e) => handleTierChange(idx, 'price', parseFloat(e.target.value))}
                           className="h-12 rounded-xl text-lg font-black bg-white border-zinc-100 shadow-none focus:ring-4 focus:ring-indigo-500/10 disabled:opacity-30"
                         />
+                        {platformConfig && tier.tier_type !== 'free' && tier.price > 0 && (
+                          <div className="mt-2 px-3 py-2.5 bg-zinc-50 rounded-xl space-y-1.5 border border-zinc-100/50">
+                            <div className="flex justify-between text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
+                              <span>Platform Fee ({platformConfig.platform_fee_pct}%)</span>
+                              <span>-₹{(tier.price * (platformConfig.platform_fee_pct / 100)).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
+                              <span>GST ({platformConfig.gst_rate_pct}%)</span>
+                              <span>-₹{((tier.price * (platformConfig.platform_fee_pct / 100)) * (platformConfig.gst_rate_pct / 100)).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] font-black text-emerald-600 uppercase tracking-widest pt-1.5 mt-1 border-t border-zinc-200">
+                              <span>You Earn</span>
+                              <span>₹{(tier.price - (tier.price * (platformConfig.platform_fee_pct / 100)) - ((tier.price * (platformConfig.platform_fee_pct / 100)) * (platformConfig.gst_rate_pct / 100))).toFixed(2)}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-[9px] font-black uppercase text-zinc-400 tracking-widest ml-1">Inventory Qty</label>

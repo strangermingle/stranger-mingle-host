@@ -63,7 +63,8 @@ export async function createEventAction(formData: FormData) {
 
     // 2. Prepare Data for RPC
     const calculatedMaxCapacity = validated.ticket_tiers?.reduce((sum: number, tier) => sum + (tier.total_quantity || 0), 0) || validated.max_capacity
-    const slug = validated.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).substring(2, 5)
+    const eventTitle = validated.title || 'Untitled Event'
+    const slug = eventTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).substring(2, 5)
 
     // Only allow 'published' if it's already paid or doesn't require payment (logic for free events could be added here)
     // For now, respect the 'draft' default but allow override if the schema allows 'published'
@@ -71,7 +72,7 @@ export async function createEventAction(formData: FormData) {
 
     const { data: createdEventId, error: rpcError } = await supabase.rpc('create_event_complex', {
       event_data: {
-        title: validated.title,
+        title: eventTitle,
         host_id: validated.host_id,
         category_id: validated.category_id,
         location_id: locationId,
@@ -111,6 +112,33 @@ export async function createEventAction(formData: FormData) {
     })
 
     if (rpcError) throw rpcError
+
+    // Ensure events table has vertical_poster_url and alt texts (in case RPC is outdated)
+    await supabase.from('events').update({
+      cover_image_url: validated.cover_image_url || null,
+      cover_image_alt: validated.cover_image_alt || null,
+      vertical_poster_url: validated.vertical_poster_url || null,
+      vertical_poster_alt: validated.vertical_poster_alt || null,
+    }).eq('id', createdEventId)
+
+    if (validated.cover_image_url) {
+      await supabase.from('event_images').insert({
+        event_id: createdEventId,
+        image_url: validated.cover_image_url,
+        alt_text: validated.cover_image_alt || null,
+        is_cover: true,
+        sort_order: 0
+      })
+    }
+    if (validated.vertical_poster_url) {
+      await supabase.from('event_images').insert({
+        event_id: createdEventId,
+        image_url: validated.vertical_poster_url,
+        alt_text: validated.vertical_poster_alt || null,
+        is_cover: false,
+        sort_order: 1
+      })
+    }
 
     revalidatePath('/events/published')
     revalidatePath('/events/drafts')
@@ -334,6 +362,18 @@ export async function updateEventAction(eventId: string, formData: FormData) {
       }
     }
 
+    // Sync alt_text to event_images
+    if (validated.cover_image_url) {
+       await supabase.from('event_images')
+         .update({ alt_text: validated.cover_image_alt || null })
+         .match({ event_id: eventId, image_url: validated.cover_image_url })
+    }
+    if (validated.vertical_poster_url) {
+       await supabase.from('event_images')
+         .update({ alt_text: validated.vertical_poster_alt || null })
+         .match({ event_id: eventId, image_url: validated.vertical_poster_url })
+    }
+
     revalidatePath('/')
     revalidatePath('/events')
     revalidatePath(`/events/${eventData.slug}`)
@@ -388,24 +428,22 @@ export async function uploadImageAction(
     if (resolvedType === 'landscape' || resolvedType === 'vertical') {
       const isLandscape = resolvedType === 'landscape'
       
-      const { data: imageData, error: insertError } = await supabase.from('event_images')
-        .insert({
-          event_id: (id === 'new-event' ? null : id) as string, // Cast to string to satisfy non-nullable type if we're sure it matches. 
-          // Actually, if it's 'new-event', we probably shouldn't be inserting into event_images yet if event_id is required.
-          // For now, I'll use a type assertion to string to pass lint, as this logic was already there.
-          image_url: publicUrl,
-          is_cover: isLandscape
-        })
-        .select()
-        .single()
-
       if (id !== 'new-event' && id !== 'new-host' && !id.startsWith('temp-')) {
+        const { data: imageData, error: insertError } = await supabase.from('event_images')
+          .insert({
+            event_id: id,
+            image_url: publicUrl,
+            is_cover: isLandscape
+          })
+          .select()
+          .single()
+
         const updateField = isLandscape ? 'cover_image_url' : 'vertical_poster_url'
         await supabase.from('events').update({ [updateField]: publicUrl }).eq('id', id)
-      }
 
-      if (insertError) return { success: true, url: publicUrl }
-      return { success: true, image: imageData, url: publicUrl }
+        if (insertError) return { success: true, url: publicUrl }
+        return { success: true, image: imageData, url: publicUrl }
+      }
     }
 
     return { success: true, url: publicUrl }
@@ -430,6 +468,9 @@ export async function deleteImageAction(url: string, eventId?: string) {
   }
 
   try {
+    if (eventId && eventId !== 'new-event' && !eventId.startsWith('temp-')) {
+      await supabase.from('event_images').delete().match({ event_id: eventId, image_url: url })
+    }
     const res = await deleteFromCloudinary(url)
     return { success: true, result: res }
   } catch (err: unknown) {

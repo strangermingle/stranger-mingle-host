@@ -73,8 +73,8 @@ export default async function DashboardLayout({
           <HostSidebar user={user} dbUser={dbUser} />
 
           {/* Main Content */}
-          <main className="flex-1 md:pl-64 pl-16 flex flex-col min-h-[calc(100vh-73px)]">
-            <div className="flex-1 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 md:px-8">
+          <main className="flex-1 w-full min-w-0 md:pl-20 pb-20 md:pb-0 flex flex-col min-h-[calc(100vh-73px)]">
+            <div className="flex-1 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 md:px-8 overflow-x-hidden">
               {children}
             </div>
           </main>

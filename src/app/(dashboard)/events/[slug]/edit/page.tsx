@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEventDetailsAction } from '@/actions/event.actions'
 import CreateEventForm from '@/components/dashboard/events/CreateEventForm'
 import { redirect, notFound } from 'next/navigation'
+import { getPlatformConfig } from '@/lib/repositories/platform.repository'
 
 export default async function EditEventPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -40,6 +41,8 @@ export default async function EditEventPage({ params }: { params: Promise<{ slug
     .select('id, display_name')
     .eq('user_id', user.id)
 
+  const platformConfig = await getPlatformConfig()
+
   return (
     <div className="py-8 md:py-12">
       <div className="max-w-2xl mx-auto mb-10 text-center space-y-4">
@@ -56,6 +59,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ slug
         hostProfiles={hostProfiles || []} 
         initialData={event}
         eventId={event.id}
+        platformConfig={platformConfig}
       />
     </div>
   )

@@ -4,12 +4,13 @@ export const createEventSchema = z
   .object({
     title: z
       .string()
-      .min(5, 'Title must be at least 5 characters')
-      .max(255, 'Title cannot exceed 255 characters'),
-    host_id: z.string().uuid('Invalid host page selected'),
-    category_id: z.string().uuid('Invalid category selected'),
-    start_datetime: z.string().datetime({ message: 'Invalid start date' }),
-    end_datetime: z.string().datetime({ message: 'Invalid end date' }),
+      .max(255, 'Title cannot exceed 255 characters')
+      .optional()
+      .or(z.literal('')),
+    host_id: z.string().uuid('Invalid host page selected').optional().or(z.literal('')),
+    category_id: z.string().uuid('Invalid category selected').optional().or(z.literal('')),
+    start_datetime: z.string().optional().or(z.literal('')),
+    end_datetime: z.string().optional().or(z.literal('')),
     timezone: z.string().min(1, 'Timezone is required'),
     ticketing_mode: z.enum(['platform', 'external', 'free', 'rsvp', 'none']),
     event_type: z.enum(['in_person', 'online', 'hybrid']),
@@ -104,7 +105,10 @@ export const createEventSchema = z
     ).optional(),
   })
   .refine(
-    (data) => new Date(data.end_datetime) > new Date(data.start_datetime),
+    (data) => {
+      if (!data.start_datetime || !data.end_datetime) return true;
+      return new Date(data.end_datetime) > new Date(data.start_datetime)
+    },
     {
       message: 'End date must be after start date',
       path: ['end_datetime'],
@@ -134,15 +138,34 @@ export const createEventSchema = z
       path: ['external_ticket_url'],
     }
   )
+  .superRefine((data, ctx) => {
+    if (data.status !== 'draft') {
+      if (!data.title || data.title.length < 5) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Title must be at least 5 characters', path: ['title'] })
+      }
+      if (!data.host_id) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid host page selected', path: ['host_id'] })
+      }
+      if (!data.category_id) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid category selected', path: ['category_id'] })
+      }
+      if (!data.start_datetime) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid start date', path: ['start_datetime'] })
+      }
+      if (!data.end_datetime) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid end date', path: ['end_datetime'] })
+      }
+    }
+  })
 
 // Make all fields optional for the update schema, but keep refining logic
 // Since createEventSchema uses .refine(), we grab its inner schema safely
 const _baseEventSchema = z.object({
-  title: z.string().min(5).max(255),
-  host_id: z.string().uuid(),
-  category_id: z.string().uuid(),
-  start_datetime: z.string().datetime(),
-  end_datetime: z.string().datetime(),
+  title: z.string().max(255).optional().or(z.literal('')),
+  host_id: z.string().uuid().optional().or(z.literal('')),
+  category_id: z.string().uuid().optional().or(z.literal('')),
+  start_datetime: z.string().optional().or(z.literal('')),
+  end_datetime: z.string().optional().or(z.literal('')),
   timezone: z.string().min(1),
   ticketing_mode: z.enum(['platform', 'external', 'free', 'rsvp', 'none']),
   event_type: z.enum(['in_person', 'online', 'hybrid']),
@@ -216,17 +239,25 @@ const _baseEventSchema = z.object({
   ).optional(),
 })
 
-export const updateEventSchema = _baseEventSchema.partial().refine(
-  (data: any) => {
+export const updateEventSchema = _baseEventSchema.partial().superRefine(
+  (data: any, ctx) => {
+    if (data.status && data.status !== 'draft') {
+      if (data.title !== undefined && (!data.title || data.title.length < 5)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Title must be at least 5 characters', path: ['title'] })
+      }
+      if (data.start_datetime !== undefined && !data.start_datetime) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid start date', path: ['start_datetime'] })
+      }
+      if (data.end_datetime !== undefined && !data.end_datetime) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid end date', path: ['end_datetime'] })
+      }
+    }
     // Only check date order if both are provided during the update
     if (data.start_datetime && data.end_datetime) {
-      return new Date(data.end_datetime) > new Date(data.start_datetime)
+      if (new Date(data.end_datetime) <= new Date(data.start_datetime)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'End date must be after start date', path: ['end_datetime'] })
+      }
     }
-    return true
-  },
-  {
-    message: 'End date must be after start date',
-    path: ['end_datetime'],
   }
 )
 

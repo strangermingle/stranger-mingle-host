@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import CreateEventForm from '@/components/dashboard/events/CreateEventForm'
 import { redirect } from 'next/navigation'
+import { getPlatformConfig } from '@/lib/repositories/platform.repository'
 
 export default async function CreateEventPage() {
   const supabase = await createClient()
@@ -20,6 +21,8 @@ export default async function CreateEventPage() {
     .from('host_profiles')
     .select('id, display_name')
     .eq('user_id', user.id)
+
+  const platformConfig = await getPlatformConfig()
 
   if (!hostProfiles || hostProfiles.length === 0) {
     return (
@@ -70,6 +73,7 @@ export default async function CreateEventPage() {
         <CreateEventForm 
           categories={categories || []} 
           hostProfiles={hostProfiles || []} 
+          platformConfig={platformConfig}
         />
       </div>
     </div>

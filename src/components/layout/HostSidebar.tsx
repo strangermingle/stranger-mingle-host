@@ -8,8 +8,6 @@ import {
   Users, 
   QrCode, 
   CreditCard,
-  ChevronDown,
-  ChevronRight,
   PlusCircle,
   MapPin,
   MessageSquare,
@@ -72,147 +70,162 @@ const menuItems = [
 
 export function HostSidebar({ user, dbUser }: HostSidebarProps) {
   const pathname = usePathname();
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
-  // Automatically expand section based on current path
+  // Close mobile submenu when path changes
   useEffect(() => {
-    const currentSection = menuItems.find(item => 
-      item.subpages?.some(sub => pathname.startsWith(sub.href)) || 
-      (item.href && pathname === item.href)
-    );
-    if (currentSection && currentSection.title) {
-      setExpandedSection(currentSection.title);
-    }
+    setActiveMenu(null);
   }, [pathname]);
 
-  const toggleSection = (title: string) => {
-    setExpandedSection(expandedSection === title ? null : title);
+  const toggleMenu = (title: string) => {
+    setActiveMenu(activeMenu === title ? null : title);
   };
 
-  const hostName = dbUser?.username || user?.email?.split('@')[0] || 'Host Name';
+  const activeSubpages = menuItems.find(item => item.title === activeMenu)?.subpages;
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-100 flex flex-col transition-all duration-300 w-16 md:w-64 pt-[73px]">
-      
-      {/* Sidebar Header */}
-      <div className="flex flex-col items-center md:items-start p-4 border-b border-gray-50 bg-gray-50/50">
-         <h2 className="hidden md:block text-base font-black text-gray-900 truncate w-full uppercase tracking-tight">
-            {hostName}
-         </h2>
-         <p className="hidden md:block text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1">
-            Host Dashboard
-         </p>
-         {/* Mobile view avatar representation instead of text */}
-         <div className="md:hidden flex h-8 w-8 rounded-full bg-indigo-100 items-center justify-center text-indigo-700 font-bold text-xs ring-2 ring-white">
-            {hostName.charAt(0).toUpperCase()}
-         </div>
-      </div>
-
-      {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto py-6 px-2 md:px-4 hide-scrollbar">
-        <ul className="space-y-1.5 flex flex-col items-center md:items-stretch">
+    <>
+      {/* DESKTOP SLIM SIDEBAR */}
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-20 pt-[73px] bg-white border-r border-gray-100 flex-col items-center z-40 transition-all">
+        <div className="flex-1 w-full py-6 flex flex-col items-center gap-6">
           {menuItems.map((item) => {
-            const isMenuExpanded = expandedSection === item.title;
-            const isMenuPathActive = item.href ? pathname === item.href : item.subpages?.some(s => pathname.startsWith(s.href));
+            const isActive = item.href 
+              ? pathname === item.href 
+              : item.subpages?.some(s => pathname.startsWith(s.href));
+
+            if (item.href) {
+              return (
+                <Link
+                  key={item.title}
+                  href={item.href}
+                  title={item.title}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-3 rounded-xl transition-all relative group",
+                    isActive 
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" 
+                      : "text-zinc-500 hover:bg-indigo-50 hover:text-indigo-600"
+                  )}
+                >
+                  <item.icon className="w-6 h-6" />
+                </Link>
+              );
+            }
 
             return (
-              <li key={item.title} className="w-full relative group">
-                {item.href ? (
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "flex items-center md:justify-between px-3 py-3 md:px-4 md:py-3.5 rounded-xl transition-all duration-200 group relative",
-                      isMenuPathActive 
-                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
-                        : "text-zinc-500 hover:bg-indigo-50 hover:text-indigo-600"
-                    )}
-                    title={item.title}
-                  >
-                    <div className="flex items-center justify-center md:justify-start gap-3 w-full">
-                      <item.icon className={cn("h-5 w-5 shrink-0", isMenuPathActive ? "text-white" : "text-current")} />
-                      <span className="hidden md:block text-xs font-bold tracking-wide">{item.title}</span>
+              <div key={item.title} className="relative group w-full flex justify-center">
+                <button
+                  title={item.title}
+                  onClick={() => toggleMenu(item.title)}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-3 rounded-xl transition-all",
+                    isActive 
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" 
+                      : "text-zinc-500 hover:bg-indigo-50 hover:text-indigo-600"
+                  )}
+                >
+                  <item.icon className="w-6 h-6" />
+                </button>
+                
+                {/* Desktop Hover/Click Submenu */}
+                <div className={cn("absolute left-full top-0 z-50 pl-2", activeMenu === item.title ? "block" : "hidden group-hover:block")}>
+                  <div className="bg-white shadow-xl shadow-gray-200/50 border border-gray-100 rounded-2xl w-64 py-3 px-2">
+                    <div className="px-3 pb-2 mb-2 border-b border-gray-50 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      {item.title}
                     </div>
-                  </Link>
-                ) : (
-                  <div>
-                    <button
-                      onClick={() => toggleSection(item.title)}
-                      className={cn(
-                        "flex items-center justify-between w-full px-3 py-3 md:px-4 md:py-3.5 rounded-xl transition-all duration-200",
-                        isMenuPathActive 
-                          ? (isMenuExpanded ? "bg-indigo-50 text-indigo-700" : "bg-indigo-600 text-white shadow-lg shadow-indigo-200")
-                          : "text-zinc-500 hover:bg-indigo-50 hover:text-indigo-600",
-                        !isMenuExpanded && !isMenuPathActive && "hover:bg-gray-50"
-                      )}
-                      title={item.title}
-                    >
-                      <div className="flex items-center justify-center md:justify-start gap-3 w-full md:w-auto">
-                        <item.icon className={cn("h-5 w-5 shrink-0", isMenuPathActive && !isMenuExpanded ? "text-white" : "text-current")} />
-                        <span className="hidden md:block text-xs font-bold tracking-wide">{item.title}</span>
-                      </div>
-                      <ChevronDown
-                        className={cn(
-                          "hidden md:block h-4 w-4 shrink-0 transition-transform duration-300",
-                          isMenuExpanded ? "rotate-180" : "rotate-0",
-                          isMenuPathActive && !isMenuExpanded ? "text-white" : "text-current"
+                    {item.subpages?.map((sub) => {
+                      const isSubActive = pathname === sub.href;
+                      return (
+                        <Link
+                          key={sub.name}
+                          href={sub.href}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all",
+                            isSubActive 
+                            ? "bg-indigo-50 text-indigo-700" 
+                            : "text-gray-600 hover:bg-gray-50 hover:text-indigo-600"
                         )}
-                      />
-                    </button>
-
-                    {/* Subpages logic: Desktop expands vertically, Mobile shows a floating menu on hover or click (for simplicity, we let mobile user see it on click if we want, but since mobile is only icon, a generic approach is standard) */}
-                    <div className={cn(
-                        "md:block overflow-hidden transition-all duration-300 ease-in-out",
-                        isMenuExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-                    )}>
-                      {isMenuExpanded && (
-                         <div className="md:hidden absolute left-16 top-0 ml-2 bg-white rounded-xl shadow-xl border border-gray-100 w-48 z-50 py-2">
-                             {item.subpages?.map((subpage) => {
-                                const isSubActive = pathname === subpage.href;
-                                return (
-                                  <Link
-                                    key={subpage.href}
-                                    href={subpage.href}
-                                    className={cn(
-                                      "flex items-center gap-3 px-4 py-2 text-xs font-bold transition-colors",
-                                      isSubActive ? "text-indigo-600 bg-indigo-50" : "text-zinc-500 hover:text-indigo-600 hover:bg-gray-50"
-                                    )}
-                                  >
-                                    <subpage.icon className="h-4 w-4" />
-                                    {subpage.name}
-                                  </Link>
-                                );
-                             })}
-                         </div>
-                      )}
-
-                      <ul className="hidden md:flex flex-col gap-1 mt-2 mb-2 relative before:content-[''] before:absolute before:left-[21px] before:top-2 before:bottom-2 before:w-px before:bg-gray-200">
-                        {item.subpages?.map((subpage) => {
-                          const isSubActive = pathname === subpage.href;
-                          return (
-                            <li key={subpage.name}>
-                              <Link
-                                href={subpage.href}
-                                className={cn(
-                                  "flex items-center gap-3 py-2.5 pl-10 pr-4 text-xs font-semibold rounded-lg transition-all relative",
-                                  isSubActive 
-                                    ? "text-indigo-700 bg-indigo-50/50 before:content-[''] before:absolute before:left-[19px] before:w-[5px] before:h-[5px] before:rounded-full before:bg-indigo-600" 
-                                    : "text-zinc-500 hover:text-indigo-600 hover:bg-gray-50/80 before:content-[''] before:absolute before:left-[20px] before:w-[3px] before:h-[3px] before:rounded-full before:bg-gray-300 hover:before:bg-indigo-400"
-                                )}
-                              >
-                                {subpage.name}
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
+                      >
+                        <sub.icon className="w-4 h-4" />
+                        {sub.name}
+                      </Link>
+                    );
+                  })}
                   </div>
-                )}
-              </li>
+                </div>
+              </div>
             );
           })}
-        </ul>
-      </div>
-    </aside>
+        </div>
+      </aside>
+
+      {/* MOBILE BOTTOM NAV */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.02)] z-50 flex justify-between items-center px-6">
+        {menuItems.map((item) => {
+          const isActive = item.href 
+            ? pathname === item.href 
+            : item.subpages?.some(s => pathname.startsWith(s.href)) || activeMenu === item.title;
+
+          return item.href ? (
+            <Link
+              key={item.title}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center gap-1 p-2 rounded-xl transition-all",
+                isActive ? "text-indigo-600" : "text-gray-400"
+              )}
+            >
+              <item.icon className={cn("w-6 h-6", isActive && "fill-indigo-50/50")} />
+              <span className="text-[10px] font-bold">{item.title}</span>
+            </Link>
+          ) : (
+            <button
+              key={item.title}
+              onClick={() => toggleMenu(item.title)}
+              className={cn(
+                "flex flex-col items-center gap-1 p-2 rounded-xl transition-all",
+                isActive ? "text-indigo-600" : "text-gray-400"
+              )}
+            >
+              <item.icon className={cn("w-6 h-6", isActive && "fill-indigo-50/50")} />
+              <span className="text-[10px] font-bold">{item.title}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* MOBILE SUBMENU POPUP */}
+      {activeMenu && activeSubpages && (
+        <>
+          <div 
+            className="md:hidden fixed inset-0 z-40 bg-black/5 backdrop-blur-[1px]" 
+            onClick={() => setActiveMenu(null)}
+          />
+          <div className="md:hidden fixed bottom-24 left-4 right-4 bg-white shadow-2xl shadow-gray-300/40 border border-gray-100 rounded-3xl z-50 p-3 flex flex-col gap-1 animate-in slide-in-from-bottom-4 fade-in duration-200">
+            <div className="px-3 pt-2 pb-3 mb-1 border-b border-gray-50 flex justify-between items-center">
+              <span className="text-xs font-black text-gray-800 uppercase tracking-wider">{activeMenu}</span>
+              <button onClick={() => setActiveMenu(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+            </div>
+            {activeSubpages.map((sub) => {
+              const isSubActive = pathname === sub.href;
+              return (
+                <Link
+                  key={sub.name}
+                  href={sub.href}
+                  className={cn(
+                    "flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold transition-all",
+                    isSubActive 
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-200/50" 
+                      : "text-gray-600 hover:bg-gray-50 active:bg-gray-100"
+                  )}
+                >
+                  <sub.icon className="w-5 h-5" />
+                  {sub.name}
+                </Link>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </>
   );
 }
