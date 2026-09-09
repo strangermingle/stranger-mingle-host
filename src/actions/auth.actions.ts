@@ -157,10 +157,21 @@ export async function forgotPasswordAction(formData: FormData) {
 
     if (user) {
       // Ensure the user exists in auth.users with the correct ID matching public.users
-      await supabaseAdmin.rpc('provision_host_auth_user', {
-        target_email: email,
-        target_id: user.id,
-      })
+      try {
+        const { data: existingAuth } = await supabaseAdmin.auth.admin.getUserById(user.id)
+        if (!existingAuth?.user) {
+          const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
+            id: user.id,
+            email: email,
+            email_confirm: true,
+          })
+          if (createErr && !createErr.message.toLowerCase().includes('already')) {
+            console.warn('admin.createUser note in forgotPasswordAction:', createErr.message)
+          }
+        }
+      } catch (authProvisionErr) {
+        console.warn('Auth user provision error in forgotPasswordAction:', authProvisionErr)
+      }
 
       const redirectTo = await getPasswordResetRedirectTo()
 
