@@ -17,6 +17,7 @@ import {
   Building,
   DollarSign,
   TrendingUp,
+  PhoneCall,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -56,6 +57,11 @@ const menuItems = [
       { name: 'Scanner', href: '/attendance/scanner', icon: Scan },
       { name: 'All attendees', href: '/attendance/all', icon: UserCheck },
     ],
+  },
+  {
+    title: 'Phone a Friend',
+    icon: PhoneCall,
+    href: '/phone-a-friend',
   },
   {
     title: 'Billing',
