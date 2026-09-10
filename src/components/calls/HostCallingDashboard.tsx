@@ -202,8 +202,6 @@ export default function HostCallingDashboard({
   // Robust Microphone Testing across Chrome, Safari, Firefox, Edge & Incognito
   const testAndGrantMicrophone = async () => {
     setIsTestingMic(true)
-    setShowMicHelp(false)
-    setMicErrorMessage(null)
     setMicVolumeLevel(0)
 
     // 1. Check Secure Context requirement (Chrome/Safari block getUserMedia on plain HTTP)
@@ -229,14 +227,8 @@ export default function HostCallingDashboard({
     }
 
     try {
-      // Request audio stream
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      })
+      // Request audio stream with basic universal audio constraint
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
       // Microphone permission GRANTED! Now measure real volume using Web Audio API
       let streamTracksStopped = false
@@ -288,6 +280,7 @@ export default function HostCallingDashboard({
 
       setMicStatus('granted')
       setShowMicHelp(false)
+      setMicErrorMessage(null)
       toast.success('Microphone verified & allowed! Voice input is active and ready for calls.', {
         duration: 5000
       })
@@ -296,17 +289,29 @@ export default function HostCallingDashboard({
       setMicStatus('denied')
       setShowMicHelp(true)
 
-      let friendlyMsg = 'Microphone permission was not granted.'
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        friendlyMsg = 'Microphone was blocked by your browser. Please allow it in the URL bar settings.'
+      let friendlyMsg = err?.message || 'Microphone permission was not granted.'
+      
+      // Check if browser site settings already say granted (indicates OS block or reload required)
+      let browserSettingGranted = false
+      try {
+        if (typeof navigator !== 'undefined' && (navigator as any).permissions?.query) {
+          const p = await (navigator as any).permissions.query({ name: 'microphone' })
+          if (p.state === 'granted') browserSettingGranted = true
+        }
+      } catch {}
+
+      if (browserSettingGranted) {
+        friendlyMsg = 'Browser site setting is allowed, but the browser cannot access the microphone. This happens when: (1) Chrome needs a page reload after toggling permissions, or (2) macOS / Android System Settings is blocking the browser.'
+      } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        friendlyMsg = 'Microphone access was denied. If you recently toggled permission in the URL bar, reload the page to apply it.'
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        friendlyMsg = 'No microphone device found. Please connect an earphone or microphone.'
+        friendlyMsg = 'No microphone device found on this device. Please connect an earphone or microphone.'
       } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        friendlyMsg = 'Microphone is already occupied by another app (e.g. Zoom, Meet, or phone call).'
+        friendlyMsg = 'Microphone is currently in use by another app (e.g. Zoom, Meet, or phone call).'
       }
 
-      setMicErrorMessage(friendlyMsg)
-      toast.error(friendlyMsg, { duration: 6000 })
+      setMicErrorMessage(`${friendlyMsg} (${err.name || 'Error'}: ${err.message || 'Access Denied'})`)
+      toast.error('Microphone check failed. See troubleshooting guide on screen.', { duration: 6000 })
     } finally {
       setIsTestingMic(false)
     }
@@ -544,30 +549,68 @@ export default function HostCallingDashboard({
 
         {/* Clear Instructions if Browser Blocked Microphone */}
         {showMicHelp && (
-          <div className="bg-rose-950/70 border border-rose-800/80 rounded-2xl p-4 text-rose-200 text-xs space-y-2">
-            <div className="flex items-center gap-2 font-bold text-rose-100">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>Browser Has Blocked Microphone Access</span>
+          <div className="bg-rose-950/80 border border-rose-800 rounded-2xl p-5 text-rose-200 text-xs space-y-3 shadow-lg">
+            <div className="flex items-center gap-2 font-bold text-rose-100 text-sm">
+              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+              <span>Microphone Access Requires Attention</span>
             </div>
-            <p className="text-rose-200/90 leading-relaxed font-normal">
-              {micErrorMessage || 'Because browsers strictly guard privacy, once a permission is denied, the website cannot show the popup automatically.'}
-            </p>
-            <div className="bg-rose-900/50 rounded-xl p-3 border border-rose-800/50 space-y-1.5 text-zinc-200">
-              <div className="font-bold text-white text-[11px] uppercase tracking-wider">How to unblock in 5 seconds:</div>
-              <ol className="list-decimal list-inside space-y-1 text-xs text-rose-100">
-                <li>Look at the address bar at the very top of your browser (where you see <span className="text-white font-mono bg-black/40 px-1 py-0.5 rounded">strangermingle.com</span>).</li>
-                <li>Click the <strong>🔒 Lock</strong> or <strong>🎛️ Settings</strong> icon next to the website address.</li>
-                <li>Find <strong>Microphone</strong> and switch it from <em>Block</em> to <strong>Allow</strong>.</li>
-                <li>Click the button below to re-verify.</li>
-              </ol>
+            
+            <div className="p-2.5 rounded-xl bg-black/40 border border-rose-900/60 font-mono text-[11px] text-rose-300 break-words">
+              {micErrorMessage || 'Permission was not granted by your browser or operating system.'}
             </div>
-            <button
-              onClick={testAndGrantMicrophone}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-sm transition-all"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Re-test Microphone Now
-            </button>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              {/* Step 1: Browser Reload */}
+              <div className="bg-rose-900/40 rounded-xl p-3.5 border border-rose-800/50 space-y-2">
+                <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px]">1</span>
+                  Did you toggle "Allow" in the URL bar?
+                </div>
+                <p className="text-[11px] text-rose-200/90 leading-relaxed font-normal">
+                  Chrome and Safari <strong>require a page reload</strong> before the website can see your updated microphone setting.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Reload Page to Apply Permission
+                </button>
+              </div>
+
+              {/* Step 2: OS System Permissions (Mac / Android) */}
+              <div className="bg-rose-900/40 rounded-xl p-3.5 border border-rose-800/50 space-y-2">
+                <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px]">2</span>
+                  Check Mac / Phone System Settings
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-[11px] text-rose-200/90 leading-relaxed">
+                  <li><strong>Mac:</strong> Open <em>System Settings &gt; Privacy &amp; Security &gt; Microphone</em> &rarr; Turn <strong>Google Chrome</strong> (or Safari) <strong>ON</strong>.</li>
+                  <li><strong>Android:</strong> Open <em>Settings &gt; Apps &gt; Chrome &gt; Permissions &gt; Microphone</em> &rarr; Choose <strong>Allow</strong>.</li>
+                  <li>Close other apps like Zoom or Google Meet that might be locking the microphone.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                type="button"
+                onClick={testAndGrantMicrophone}
+                disabled={isTestingMic}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-sm transition-all"
+              >
+                {isTestingMic ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mic className="w-3.5 h-3.5" />}
+                Re-test Microphone Now
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMicHelp(false)}
+                className="text-xs text-rose-300 hover:text-white underline underline-offset-2"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         )}
       </div>
