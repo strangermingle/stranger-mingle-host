@@ -1,6 +1,4 @@
-const VAPID_PUBLIC_KEY =
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
-  'BChxwzPSfiV0a-BbjUvVsltvjLKblgVNMRTT9eRCIijwYDOXfKBNMdBYqQ46BMuGfHW6YPDahzVNnn5gYQvbGJA';
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
