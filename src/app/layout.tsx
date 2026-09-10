@@ -4,6 +4,7 @@ import './globals.css'
 import Script from 'next/script'
 import GoogleTagManager from '@/components/analytics/GoogleTagManager'
 import ConsentBanner from '@/components/analytics/ConsentBanner'
+import { Toaster } from 'sonner'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -77,6 +78,7 @@ export default function RootLayout({
 
         {children}
         <ConsentBanner />
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   )
