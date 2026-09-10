@@ -147,6 +147,20 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
   const handleAccept = async () => {
     if (!incomingCall) return
     setIsResponding(true)
+
+    // Verify microphone permission before accepting incoming call
+    try {
+      if (typeof window !== 'undefined' && navigator?.mediaDevices?.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        stream.getTracks().forEach((t) => t.stop())
+      }
+    } catch (permErr: any) {
+      console.warn('Microphone permission check failed on host accept:', permErr)
+      setIsResponding(false)
+      toast.error('Microphone permission is required to accept calls. Please allow microphone in your browser settings.')
+      return
+    }
+
     stopRingtone()
 
     try {

@@ -18,8 +18,14 @@ export function useAgoraVoiceRoom({ appId, channelName, token, account }: VoiceR
   const [networkQuality, setNetworkQuality] = useState<'good' | 'fair' | 'poor'>('good')
   const [error, setError] = useState<string | null>(null)
 
+  // Audio permission and autoplay states
+  const [isMicBlocked, setIsMicBlocked] = useState(false)
+  const [isMicPermissionGranted, setIsMicPermissionGranted] = useState<boolean | null>(null)
+  const [isAutoplayBlocked, setIsAutoplayBlocked] = useState(false)
+
   const clientRef = useRef<any>(null)
   const localAudioTrackRef = useRef<any>(null)
+  const remoteAudioTracksRef = useRef<Map<string | number, any>>(new Map())
 
   const leaveRoom = useCallback(async () => {
     try {
@@ -32,6 +38,7 @@ export function useAgoraVoiceRoom({ appId, channelName, token, account }: VoiceR
         await clientRef.current.leave()
         clientRef.current = null
       }
+      remoteAudioTracksRef.current.clear()
       setIsConnected(false)
     } catch (err: any) {
       console.warn('Error during voice room leave:', err)
@@ -45,6 +52,51 @@ export function useAgoraVoiceRoom({ appId, channelName, token, account }: VoiceR
     setIsMuted(nextMuted)
   }, [isMuted])
 
+  // Resume playback if browser blocks autoplay
+  const resumeAutoplay = useCallback(async () => {
+    try {
+      const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
+      if (typeof (AgoraRTC as any).resumeAudioContext === 'function') {
+        await (AgoraRTC as any).resumeAudioContext()
+      }
+      remoteAudioTracksRef.current.forEach((track) => {
+        try {
+          track.play()
+        } catch {}
+      })
+      setIsAutoplayBlocked(false)
+    } catch (err) {
+      console.warn('Failed to resume autoplay in host room:', err)
+    }
+  }, [])
+
+  // Retry/re-request mic permission
+  const requestMicPermission = useCallback(async () => {
+    try {
+      const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
+      if (!clientRef.current) return
+
+      const micTrack = await AgoraRTC.createMicrophoneAudioTrack({
+        encoderConfig: 'high_quality_stereo',
+        AEC: true,
+        ANS: true,
+        AGC: true,
+      })
+
+      localAudioTrackRef.current = micTrack
+      await clientRef.current.publish([micTrack])
+
+      setIsMicBlocked(false)
+      setIsMicPermissionGranted(true)
+      setError(null)
+    } catch (micErr: any) {
+      console.warn('[VoiceRoom] Retry host mic failed:', micErr)
+      setIsMicBlocked(true)
+      setIsMicPermissionGranted(false)
+      setError('Microphone permission denied. Please allow microphone access in your browser.')
+    }
+  }, [])
+
   useEffect(() => {
     if (!appId || !channelName || !token) return
 
@@ -52,8 +104,14 @@ export function useAgoraVoiceRoom({ appId, channelName, token, account }: VoiceR
 
     async function initCall() {
       try {
-        // Dynamic import to avoid SSR errors
         const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
+
+        // Handle browser autoplay policy
+        AgoraRTC.onAudioAutoplayFailed = () => {
+          if (isMounted) {
+            setIsAutoplayBlocked(true)
+          }
+        }
 
         // Create audio-focused RTC client
         const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' })
@@ -75,14 +133,21 @@ export function useAgoraVoiceRoom({ appId, channelName, token, account }: VoiceR
         // Remote peer published audio track
         client.on('user-published', async (user, mediaType) => {
           if (mediaType === 'audio') {
-            const remoteTrack = await client.subscribe(user, 'audio')
-            remoteTrack.play()
-            if (isMounted) setRemoteUserAudioOnline(true)
+            try {
+              const remoteTrack = await client.subscribe(user, 'audio')
+              remoteAudioTracksRef.current.set(user.uid, remoteTrack)
+              remoteTrack.play()
+              if (isMounted) setRemoteUserAudioOnline(true)
+            } catch (trackErr) {
+              console.warn('[VoiceRoom] Failed playing remote user track:', trackErr)
+              if (isMounted) setIsAutoplayBlocked(true)
+            }
           }
         })
 
         client.on('user-unpublished', (user, mediaType) => {
           if (mediaType === 'audio') {
+            remoteAudioTracksRef.current.delete(user.uid)
             if (isMounted) setRemoteUserAudioOnline(false)
           }
         })
@@ -98,21 +163,35 @@ export function useAgoraVoiceRoom({ appId, channelName, token, account }: VoiceR
         // Join room using string account name or numeric UID
         await client.join(appId, channelName, token, account)
 
-        // Create high quality microphone audio track with AEC, ANS, AGC
-        const micTrack = await AgoraRTC.createMicrophoneAudioTrack({
-          encoderConfig: 'high_quality_stereo',
-          AEC: true,
-          ANS: true,
-          AGC: true,
-        })
-        localAudioTrackRef.current = micTrack
-
-        // Publish local mic track
-        await client.publish([micTrack])
-
         if (isMounted) {
           setIsConnected(true)
           setError(null)
+        }
+
+        // Create high quality microphone audio track with AEC, ANS, AGC
+        try {
+          const micTrack = await AgoraRTC.createMicrophoneAudioTrack({
+            encoderConfig: 'high_quality_stereo',
+            AEC: true,
+            ANS: true,
+            AGC: true,
+          })
+          localAudioTrackRef.current = micTrack
+
+          // Publish local mic track
+          await client.publish([micTrack])
+
+          if (isMounted) {
+            setIsMicBlocked(false)
+            setIsMicPermissionGranted(true)
+          }
+        } catch (micErr: any) {
+          console.warn('[VoiceRoom] Failed to initialize microphone track:', micErr)
+          if (isMounted) {
+            setIsMicBlocked(true)
+            setIsMicPermissionGranted(false)
+            setError('Microphone access is blocked. Please allow microphone in your browser settings.')
+          }
         }
       } catch (err: any) {
         console.error('[VoiceRoom] Failed to initialize audio call:', err)
@@ -140,5 +219,10 @@ export function useAgoraVoiceRoom({ appId, channelName, token, account }: VoiceR
     remoteVolume,
     networkQuality,
     error,
+    isMicBlocked,
+    isMicPermissionGranted,
+    isAutoplayBlocked,
+    resumeAutoplay,
+    requestMicPermission,
   }
 }

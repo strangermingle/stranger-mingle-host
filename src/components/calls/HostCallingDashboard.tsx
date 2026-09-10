@@ -114,6 +114,21 @@ export default function HostCallingDashboard({
   const handleToggleOnline = async () => {
     setIsTogglingOnline(true)
     const nextOnline = !isOnline
+
+    // Check microphone permission when going online
+    if (nextOnline) {
+      try {
+        if (typeof window !== 'undefined' && navigator?.mediaDevices?.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+          stream.getTracks().forEach((t) => t.stop())
+        }
+      } catch (permErr) {
+        setIsTogglingOnline(false)
+        toast.error('Microphone permission is required to receive voice calls. Please allow microphone in your browser settings.')
+        return
+      }
+    }
+
     try {
       const res = await toggleHostOnlineAction(nextOnline)
       if (res.success) {
