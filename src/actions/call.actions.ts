@@ -198,3 +198,71 @@ export async function endCallAction(callId: string) {
     return { success: false, error: err.message }
   }
 }
+
+export async function submitHostCallerReviewAction(params: {
+  callId: string
+  rating: number
+  notes?: string
+}) {
+  try {
+    const { hostProfile } = await getAuthenticatedHost()
+
+    const res = await fetch(`${BACKEND_URL}/api/calls`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'host-rate-caller',
+        callId: params.callId,
+        hostId: hostProfile.id,
+        rating: params.rating,
+        notes: params.notes,
+      }),
+      cache: 'no-store',
+    })
+
+    if (!res.ok) {
+      const err = await res.json()
+      return { success: false, error: err.error || 'Failed to submit review' }
+    }
+
+    const data = await res.json()
+    revalidatePath('/phone-a-friend')
+    return data
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+export async function getCallerReputationAction(callerUserId: string) {
+  try {
+    const { hostProfile } = await getAuthenticatedHost()
+
+    const res = await fetch(
+      `${BACKEND_URL}/api/calls?callerUserId=${encodeURIComponent(callerUserId)}&forHost=true&hostId=${encodeURIComponent(hostProfile.id)}`,
+      {
+        method: 'GET',
+        cache: 'no-store',
+      }
+    )
+
+    if (!res.ok) {
+      return {
+        totalCalls: 0,
+        averageRating: null,
+        ratingCount: 0,
+        recentNotes: [],
+      }
+    }
+
+    return await res.json()
+  } catch (err: any) {
+    console.error('Failed to get caller reputation:', err)
+    return {
+      totalCalls: 0,
+      averageRating: null,
+      ratingCount: 0,
+      recentNotes: [],
+    }
+  }
+}
+

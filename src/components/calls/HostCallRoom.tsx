@@ -12,10 +12,11 @@ import {
   Wifi,
   Loader2,
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  Star
 } from 'lucide-react'
 import { useAgoraVoiceRoom } from '@/hooks/useAgoraVoiceRoom'
-import { endCallAction } from '@/actions/call.actions'
+import { endCallAction, submitHostCallerReviewAction } from '@/actions/call.actions'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -33,7 +34,10 @@ export default function HostCallRoom({ call, agoraParams }: HostCallRoomProps) {
   const router = useRouter()
   const [secondsElapsed, setSecondsElapsed] = useState(0)
   const [isEnding, setIsEnding] = useState(false)
-  const [hostNotes, setHostNotes] = useState('')
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [callerRating, setCallerRating] = useState(5)
+  const [callerNotes, setCallerNotes] = useState('')
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false)
 
   const {
     isConnected,
@@ -78,7 +82,7 @@ export default function HostCallRoom({ call, agoraParams }: HostCallRoomProps) {
               await leaveRoom()
             } catch {}
             toast.info('Call ended')
-            router.push('/phone-a-friend')
+            setShowReviewModal(true)
           }
         }
       )
@@ -87,7 +91,7 @@ export default function HostCallRoom({ call, agoraParams }: HostCallRoomProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [call?.id, leaveRoom, router])
+  }, [call?.id, leaveRoom])
 
   // Dynamic duration auto-drop
   const durationLimitSeconds = (call?.duration_minutes || 15) * 60
@@ -114,13 +118,35 @@ export default function HostCallRoom({ call, agoraParams }: HostCallRoomProps) {
       await leaveRoom()
       await endCallAction(call.id)
       toast.success('Call ended successfully')
-      router.push('/phone-a-friend')
+      setShowReviewModal(true)
     } catch {
       toast.error('Failed to end call properly')
-      router.push('/phone-a-friend')
+      setShowReviewModal(true)
     } finally {
       setIsEnding(false)
     }
+  }
+
+  const handleSubmitReview = async () => {
+    setIsSubmittingReview(true)
+    try {
+      await submitHostCallerReviewAction({
+        callId: call.id,
+        rating: callerRating,
+        notes: callerNotes,
+      })
+      toast.success('Caller feedback submitted successfully')
+      router.push('/phone-a-friend')
+    } catch {
+      toast.error('Failed to save feedback')
+      router.push('/phone-a-friend')
+    } finally {
+      setIsSubmittingReview(false)
+    }
+  }
+
+  const handleSkipReview = () => {
+    router.push('/phone-a-friend')
   }
 
   const callerName = call.user?.anonymous_alias || call.user?.username || 'Anonymous Caller'
@@ -257,6 +283,88 @@ export default function HostCallRoom({ call, agoraParams }: HostCallRoomProps) {
           </button>
         </div>
       </div>
+
+      {/* Post-Call Host Caller Rating & Notes Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-zinc-950 text-white border border-zinc-800 rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl space-y-6 relative overflow-hidden">
+            {/* Ambient background glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="space-y-2 text-center relative z-10">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-black uppercase tracking-wider">
+                <ShieldCheck className="w-3 h-3 text-indigo-400" />
+                Private Host Review
+              </div>
+              <h3 className="text-2xl font-black tracking-tight text-white">
+                Rate This Caller
+              </h3>
+              <p className="text-xs text-zinc-400">
+                How was your conversation with <span className="text-zinc-200 font-bold">{callerName}</span>? This feedback is private and only seen by hosts.
+              </p>
+            </div>
+
+            {/* 1-5 Star Rating */}
+            <div className="flex items-center justify-center gap-2 relative z-10 py-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setCallerRating(star)}
+                  className="p-1 hover:scale-125 transition-transform focus:outline-none"
+                >
+                  <Star
+                    className={`w-8 h-8 transition-colors ${
+                      star <= callerRating
+                        ? 'text-amber-400 fill-amber-400'
+                        : 'text-zinc-700'
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+
+            {/* Host Private Notes Textarea */}
+            <div className="space-y-2 text-left relative z-10">
+              <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                Private Host Notes
+              </label>
+              <textarea
+                value={callerNotes}
+                onChange={(e) => setCallerNotes(e.target.value)}
+                placeholder="E.g., Respectful, good listener... (Not visible to caller)"
+                rows={3}
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 relative z-10 pt-2">
+              <button
+                type="button"
+                onClick={handleSkipReview}
+                disabled={isSubmittingReview}
+                className="flex-1 py-3.5 px-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-wider border border-zinc-800 transition-all"
+              >
+                Skip
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSubmitReview}
+                disabled={isSubmittingReview}
+                className="flex-1 py-3.5 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-950 transition-all flex items-center justify-center gap-2"
+              >
+                {isSubmittingReview ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Submit & Finish'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

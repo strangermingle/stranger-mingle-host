@@ -5,6 +5,7 @@ import { DashboardHeader } from '@/components/layout/DashboardHeader'
 import { RealtimeProvider } from '@/components/providers/RealtimeProvider'
 import { getUserWithHostProfile } from '@/lib/repositories/users.repository'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import IncomingCallAlert from '@/components/calls/IncomingCallAlert'
 
 export default async function DashboardLayout({
   children,
@@ -64,6 +65,9 @@ export default async function DashboardLayout({
 
   return (
     <RealtimeProvider userId={dbUser.id}>
+      {dbUser.host_profile?.id && (
+        <IncomingCallAlert hostId={dbUser.host_profile.id} />
+      )}
       <div className="flex flex-col min-h-screen">
         {/* Dashboard Header (host-only: logo + notifications + sign out) */}
         <DashboardHeader user={user} dbUser={dbUser} />

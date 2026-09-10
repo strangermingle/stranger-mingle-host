@@ -25,7 +25,6 @@ import {
   updateHostCallingPricingAction
 } from '@/actions/call.actions'
 import { toast } from 'sonner'
-import IncomingCallAlert from './IncomingCallAlert'
 
 interface HostCallingDashboardProps {
   hostProfile: any
@@ -147,9 +146,6 @@ export default function HostCallingDashboard({
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
-      {/* Global incoming call listener */}
-      <IncomingCallAlert hostId={hostProfile.id} />
-
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

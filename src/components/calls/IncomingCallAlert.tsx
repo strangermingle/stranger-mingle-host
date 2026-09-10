@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { respondToCallAction } from '@/actions/call.actions'
-import { Phone, PhoneOff, User, Loader2 } from 'lucide-react'
+import { respondToCallAction, getCallerReputationAction } from '@/actions/call.actions'
+import { Phone, PhoneOff, User, Loader2, Star, MessageSquare, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface IncomingCallAlertProps {
@@ -13,6 +13,12 @@ interface IncomingCallAlertProps {
 
 export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
   const [incomingCall, setIncomingCall] = useState<any>(null)
+  const [callerReputation, setCallerReputation] = useState<{
+    totalCalls: number
+    averageRating: number | null
+    ratingCount: number
+    recentNotes: string[]
+  } | null>(null)
   const [isResponding, setIsResponding] = useState(false)
   const router = useRouter()
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -127,6 +133,17 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
     }
   }, [hostId, incomingCall?.id])
 
+  // Fetch caller reputation when an incoming call arrives
+  useEffect(() => {
+    if (incomingCall?.user_id) {
+      getCallerReputationAction(incomingCall.user_id)
+        .then((rep) => setCallerReputation(rep))
+        .catch(() => setCallerReputation(null))
+    } else {
+      setCallerReputation(null)
+    }
+  }, [incomingCall?.user_id])
+
   const handleAccept = async () => {
     if (!incomingCall) return
     setIsResponding(true)
@@ -192,6 +209,45 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
             Session: 1-on-1 private voice call • ₹{incomingCall.amount}
           </p>
         </div>
+
+        {/* Caller Reputation & Previous Host Reviews (Private to Host) */}
+        {callerReputation && (
+          <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-4 text-left space-y-2.5 relative z-10 text-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Host Rating</span>
+              </div>
+              {callerReputation.averageRating !== null ? (
+                <span className="inline-flex items-center gap-1 font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  {callerReputation.averageRating} / 5 ({callerReputation.ratingCount} {callerReputation.ratingCount === 1 ? 'review' : 'reviews'})
+                </span>
+              ) : (
+                <span className="text-zinc-500 font-medium italic">New Caller (No ratings yet)</span>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-zinc-400 pt-1 border-t border-zinc-800/60">
+              <span className="text-[11px]">Past Completed Calls:</span>
+              <span className="font-bold text-zinc-200">{callerReputation.totalCalls}</span>
+            </div>
+
+            {callerReputation.recentNotes && callerReputation.recentNotes.length > 0 && (
+              <div className="pt-2 border-t border-zinc-800/60 space-y-1.5">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                  <MessageSquare className="w-3 h-3 text-zinc-400" />
+                  Notes from Hosts:
+                </div>
+                {callerReputation.recentNotes.slice(0, 2).map((note, i) => (
+                  <p key={i} className="text-zinc-300 text-[11px] bg-zinc-950/70 p-2 rounded-lg border border-zinc-800/70 italic">
+                    &ldquo;{note}&rdquo;
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center justify-center gap-4 relative z-10 pt-2">
           {/* Decline button */}
