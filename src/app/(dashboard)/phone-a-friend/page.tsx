@@ -28,16 +28,7 @@ export default async function HostPhoneAFriendPage() {
     .eq('host_id', hostProfile.id)
     .maybeSingle()
 
-  // 2. Fetch slots
-  const now = new Date().toISOString()
-  const { data: slots } = await (supabaseAdmin as any)
-    .from('phone_a_friend_slots')
-    .select('*')
-    .eq('host_id', hostProfile.id)
-    .gte('start_time', now)
-    .order('start_time', { ascending: true })
-
-  // 3. Fetch recent calls
+  // 2. Fetch recent calls
   const { data: recentCalls } = await (supabaseAdmin as any)
     .from('phone_a_friend_calls')
     .select(`
@@ -52,7 +43,6 @@ export default async function HostPhoneAFriendPage() {
     <HostCallingDashboard
       hostProfile={hostProfile}
       settings={settings}
-      slots={slots || []}
       recentCalls={recentCalls || []}
     />
   )

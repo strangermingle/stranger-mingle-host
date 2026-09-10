@@ -153,14 +153,12 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
       const res = await respondToCallAction(incomingCall.id, 'accept')
       if (res.success) {
         toast.success('Call accepted! Connecting to audio room...')
-        router.push(`/phone-a-friend/call/${incomingCall.id}`)
+        window.location.assign(`/phone-a-friend/call/${incomingCall.id}`)
       } else {
         toast.error(res.error || 'Failed to accept call')
-        setIncomingCall(null)
       }
-    } catch {
-      toast.error('An error occurred while accepting the call')
-      setIncomingCall(null)
+    } catch (err: any) {
+      toast.error(err?.message || 'An error occurred while accepting the call')
     } finally {
       setIsResponding(false)
     }

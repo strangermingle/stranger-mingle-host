@@ -5,7 +5,10 @@ import { supabaseAdmin } from '../lib/supabase/admin'
 import { getUserWithHostProfile } from '../lib/repositories/users.repository'
 import { revalidatePath } from 'next/cache'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
+const BACKEND_URL =
+  process.env.BACKEND_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  (process.env.NODE_ENV === 'production' ? 'https://api.strangermingle.com' : 'http://localhost:3001')
 
 async function getAuthenticatedHost() {
   const supabase = await createClient()
@@ -37,57 +40,6 @@ export async function toggleHostOnlineAction(isOnline: boolean) {
 
     revalidatePath('/phone-a-friend')
     return { success: true, isOnline }
-  } catch (err: any) {
-    return { success: false, error: err.message }
-  }
-}
-
-export async function createHostSlotsAction(slots: Array<{
-  slotDate: string
-  startTime: string
-  endTime: string
-  price?: number
-}>) {
-  try {
-    const { hostProfile } = await getAuthenticatedHost()
-
-    const rows = slots.map(s => ({
-      host_id: hostProfile.id,
-      slot_date: s.slotDate,
-      start_time: s.startTime,
-      end_time: s.endTime,
-      price: s.price ?? 99.0,
-      status: 'available'
-    }))
-
-    const { error } = await (supabaseAdmin as any)
-      .from('phone_a_friend_slots')
-      .insert(rows)
-
-    if (error) return { success: false, error: error.message }
-
-    revalidatePath('/phone-a-friend')
-    return { success: true }
-  } catch (err: any) {
-    return { success: false, error: err.message }
-  }
-}
-
-export async function deleteHostSlotAction(slotId: string) {
-  try {
-    const { hostProfile } = await getAuthenticatedHost()
-
-    const { error } = await (supabaseAdmin as any)
-      .from('phone_a_friend_slots')
-      .delete()
-      .eq('id', slotId)
-      .eq('host_id', hostProfile.id)
-      .eq('status', 'available')
-
-    if (error) return { success: false, error: error.message }
-
-    revalidatePath('/phone-a-friend')
-    return { success: true }
   } catch (err: any) {
     return { success: false, error: err.message }
   }
