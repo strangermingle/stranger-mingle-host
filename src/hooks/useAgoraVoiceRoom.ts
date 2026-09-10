@@ -98,12 +98,20 @@ export function useAgoraVoiceRoom({ appId, channelName, token, account }: VoiceR
   }, [])
 
   useEffect(() => {
-    if (!appId || !channelName || !token) return
+    if (!appId) {
+      setError('Agora App ID is missing. Please ensure AGORA_APP_ID is configured in the environment variables.')
+      return
+    }
+    if (!channelName || !token) {
+      setError('Agora session credentials missing. Unable to join voice room.')
+      return
+    }
 
     let isMounted = true
 
     async function initCall() {
       try {
+        console.log('[VoiceRoom] Host connecting to Agora channel:', channelName, 'with App ID:', appId?.slice(0, 6) + '...')
         const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
 
         // Handle browser autoplay policy

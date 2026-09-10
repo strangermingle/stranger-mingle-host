@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { respondToCallAction, getCallerReputationAction } from '@/actions/call.actions'
-import { Phone, PhoneOff, User, Loader2, Star, MessageSquare, ShieldCheck } from 'lucide-react'
+import { Phone, PhoneOff, User, Loader2, Star, MessageSquare, ShieldCheck, Volume2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface IncomingCallAlertProps {
@@ -13,6 +13,9 @@ interface IncomingCallAlertProps {
 
 export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
   const [incomingCall, setIncomingCall] = useState<any>(null)
+  const incomingCallRef = useRef<any>(null)
+  incomingCallRef.current = incomingCall
+
   const [callerReputation, setCallerReputation] = useState<{
     totalCalls: number
     averageRating: number | null
@@ -24,22 +27,31 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
   const audioContextRef = useRef<AudioContext | null>(null)
   const ringIntervalRef = useRef<any>(null)
 
-  // Start gentle synthesizer ringtone via Web Audio API
-  const startRingtone = () => {
+  // Gentle synthesizer ringtone via Web Audio API
+  const startRingtone = useCallback(() => {
     try {
+      if (ringIntervalRef.current) return
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
       if (!AudioCtx) return
-      audioContextRef.current = new AudioCtx()
+      const ctx = new AudioCtx()
+      audioContextRef.current = ctx
+
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {})
+      }
 
       const playChime = () => {
         if (!audioContextRef.current) return
-        const ctx = audioContextRef.current
-        const now = ctx.currentTime
+        const actx = audioContextRef.current
+        if (actx.state === 'suspended') {
+          actx.resume().catch(() => {})
+        }
+        const now = actx.currentTime
 
         // 2-tone melodic chime
-        const osc1 = ctx.createOscillator()
-        const osc2 = ctx.createOscillator()
-        const gainNode = ctx.createGain()
+        const osc1 = actx.createOscillator()
+        const osc2 = actx.createOscillator()
+        const gainNode = actx.createGain()
 
         osc1.type = 'sine'
         osc1.frequency.setValueAtTime(523.25, now) // C5
@@ -49,12 +61,12 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
         osc2.frequency.setValueAtTime(659.25, now)
         osc2.frequency.setValueAtTime(783.99, now + 0.2) // G5
 
-        gainNode.gain.setValueAtTime(0.15, now)
+        gainNode.gain.setValueAtTime(0.2, now)
         gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.6)
 
         osc1.connect(gainNode)
         osc2.connect(gainNode)
-        gainNode.connect(ctx.destination)
+        gainNode.connect(actx.destination)
 
         osc1.start(now)
         osc2.start(now)
@@ -64,12 +76,17 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
 
       playChime()
       ringIntervalRef.current = setInterval(playChime, 2200)
-    } catch (e) {
-      console.warn('AudioContext ringtone unavailable:', e)
-    }
-  }
 
-  const stopRingtone = () => {
+      // Vibration on mobile devices
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([500, 250, 500, 250, 500])
+      }
+    } catch (e) {
+      console.warn('AudioContext ringtone warning:', e)
+    }
+  }, [])
+
+  const stopRingtone = useCallback(() => {
     if (ringIntervalRef.current) {
       clearInterval(ringIntervalRef.current)
       ringIntervalRef.current = null
@@ -78,13 +95,69 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
       audioContextRef.current.close().catch(() => {})
       audioContextRef.current = null
     }
+  }, [])
+
+  const triggerBrowserNotification = (call: any) => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        const n = new Notification('📞 Incoming Stranger Mingle Voice Call!', {
+          body: `A member is calling you (₹${call.amount || 49}). Tap to answer immediately!`,
+          tag: `incoming-call-${call.id}`,
+          requireInteraction: true,
+        })
+        n.onclick = () => {
+          window.focus()
+          n.close()
+        }
+      } catch {}
+    }
   }
 
+  // Active call poller & realtime listener
   useEffect(() => {
     if (!hostId) return
 
     const supabase = createClient()
 
+    // 1. Direct fetch for active ringing calls
+    const checkForActiveRingingCalls = async () => {
+      try {
+        const oneMinuteAgo = new Date(Date.now() - 60000).toISOString()
+        const { data, error } = await (supabase as any)
+          .from('phone_a_friend_calls')
+          .select('*')
+          .eq('host_id', hostId)
+          .eq('status', 'ringing')
+          .gte('created_at', oneMinuteAgo)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (!error && data && data.length > 0) {
+          const currentRinging = data[0] as any
+          if (!incomingCallRef.current || incomingCallRef.current.id !== currentRinging.id) {
+            setIncomingCall(currentRinging)
+            startRingtone()
+            triggerBrowserNotification(currentRinging)
+          }
+        } else if (incomingCallRef.current) {
+          // No ringing call found anymore
+          stopRingtone()
+          setIncomingCall(null)
+        }
+      } catch (pollErr) {
+        console.warn('[IncomingCallAlert] Polling error:', pollErr)
+      }
+    }
+
+    // Check immediately on mount and on window focus
+    checkForActiveRingingCalls()
+    const handleFocus = () => checkForActiveRingingCalls()
+    window.addEventListener('focus', handleFocus)
+
+    // Poll every 3 seconds as a resilient fallback
+    const pollInterval = setInterval(checkForActiveRingingCalls, 3000)
+
+    // 2. Supabase Realtime channel for instant push alerts
     const channel = supabase
       .channel(`incoming_calls_${hostId}`)
       .on(
@@ -95,10 +168,11 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
           table: 'phone_a_friend_calls',
           filter: `host_id=eq.${hostId}`,
         },
-        (payload) => {
+        (payload: any) => {
           if (payload.new && payload.new.status === 'ringing') {
             setIncomingCall(payload.new)
             startRingtone()
+            triggerBrowserNotification(payload.new)
           }
         }
       )
@@ -110,13 +184,13 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
           table: 'phone_a_friend_calls',
           filter: `host_id=eq.${hostId}`,
         },
-        (payload) => {
+        (payload: any) => {
           if (payload.new) {
             if (payload.new.status === 'ringing') {
               setIncomingCall(payload.new)
               startRingtone()
             } else if (
-              incomingCall?.id === payload.new.id &&
+              incomingCallRef.current?.id === payload.new.id &&
               ['cancelled', 'rejected', 'missed', 'completed'].includes(payload.new.status)
             ) {
               stopRingtone()
@@ -128,10 +202,12 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
       .subscribe()
 
     return () => {
+      window.removeEventListener('focus', handleFocus)
+      clearInterval(pollInterval)
       stopRingtone()
       supabase.removeChannel(channel)
     }
-  }, [hostId, incomingCall?.id])
+  }, [hostId, startRingtone, stopRingtone])
 
   // Fetch caller reputation when an incoming call arrives
   useEffect(() => {
@@ -170,10 +246,10 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
         window.location.assign(`/phone-a-friend/call/${incomingCall.id}`)
       } else {
         toast.error(res.error || 'Failed to accept call')
+        setIsResponding(false)
       }
     } catch (err: any) {
       toast.error(err?.message || 'An error occurred while accepting the call')
-    } finally {
       setIsResponding(false)
     }
   }

@@ -14,7 +14,10 @@ import {
   Bell,
   CheckCircle2,
   AlertCircle,
-  Smartphone
+  Smartphone,
+  Mic,
+  Volume2,
+  Sparkles
 } from 'lucide-react'
 import { 
   toggleHostOnlineAction, 
@@ -51,13 +54,82 @@ export default function HostCallingDashboard({
   const [pushStatus, setPushStatus] = useState<'granted' | 'denied' | 'default' | 'unsupported'>('default')
   const [isSettingUpPush, setIsSettingUpPush] = useState(false)
 
+  // Microphone status
+  const [micStatus, setMicStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt')
+  const [isTestingMic, setIsTestingMic] = useState(false)
+
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setPushStatus(Notification.permission)
     } else {
       setPushStatus('unsupported')
     }
+
+    if (typeof navigator !== 'undefined' && (navigator as any).permissions?.query) {
+      (navigator as any).permissions.query({ name: 'microphone' }).then((perm: any) => {
+        setMicStatus(perm.state)
+        perm.onchange = () => setMicStatus(perm.state)
+      }).catch(() => {})
+    }
   }, [])
+
+  const testAndGrantMicrophone = async () => {
+    setIsTestingMic(true)
+    try {
+      if (typeof window !== 'undefined' && navigator?.mediaDevices?.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        stream.getTracks().forEach((t) => t.stop())
+        setMicStatus('granted')
+        toast.success('Microphone verified! Your device is ready to accept voice calls.')
+      } else {
+        toast.error('Audio devices not supported on this browser.')
+      }
+    } catch {
+      setMicStatus('denied')
+      toast.error('Microphone access was denied. Please allow microphone in your browser URL bar.')
+    } finally {
+      setIsTestingMic(false)
+    }
+  }
+
+  const testRingtoneChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+      if (!AudioCtx) {
+        toast.info('AudioContext is not supported on this device.')
+        return
+      }
+      const ctx = new AudioCtx()
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {})
+      }
+      const now = ctx.currentTime
+      const osc1 = ctx.createOscillator()
+      const osc2 = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc1.frequency.setValueAtTime(523.25, now) // C5
+      osc1.frequency.setValueAtTime(659.25, now + 0.2) // E5
+      osc2.frequency.setValueAtTime(659.25, now)
+      osc2.frequency.setValueAtTime(783.99, now + 0.2) // G5
+
+      gain.gain.setValueAtTime(0.2, now)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6)
+
+      osc1.connect(gain)
+      osc2.connect(gain)
+      gain.connect(ctx.destination)
+
+      osc1.start(now)
+      osc2.start(now)
+      osc1.stop(now + 0.6)
+      osc2.stop(now + 0.6)
+
+      toast.success('Playing incoming call chime. If you heard the sound, your speaker is ready!')
+    } catch (e: any) {
+      toast.error('Could not play audio chime: ' + e?.message)
+    }
+  }
 
   // Keep screen awake if online
   useEffect(() => {
@@ -191,6 +263,49 @@ export default function HostCallingDashboard({
             {isOnline ? 'You Are Online (Ready)' : 'You Are Offline'}
           </button>
         )}
+      </div>
+
+      {/* Call Readiness & Hardware Permissions Checklist */}
+      <div className="bg-gradient-to-r from-indigo-950 via-zinc-900 to-zinc-900 border border-indigo-900/40 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Host Call Readiness</span>
+            </div>
+            <h2 className="text-xl font-black text-white tracking-tight">
+              Hardware & Browser Permissions
+            </h2>
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              Verify your microphone, ringtone chime, and notification permissions to receive calls without interruption.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Mic Permission Button */}
+            <button
+              onClick={testAndGrantMicrophone}
+              disabled={isTestingMic}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${
+                micStatus === 'granted'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                  : 'bg-indigo-600 hover:bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-900/40'
+              }`}
+            >
+              {isTestingMic ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+              <span>{micStatus === 'granted' ? 'Microphone Ready ✓' : 'Allow Microphone 🎙️'}</span>
+            </button>
+
+            {/* Test Audio Chime */}
+            <button
+              onClick={testRingtoneChime}
+              className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs font-bold transition-all flex items-center gap-2"
+            >
+              <Volume2 className="w-4 h-4 text-indigo-400" />
+              <span>Test Ringtone 🔊</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Verification Notice */}
