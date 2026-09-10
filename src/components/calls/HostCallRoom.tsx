@@ -11,7 +11,8 @@ import {
   Sparkles,
   Wifi,
   Loader2,
-  FileText
+  FileText,
+  AlertTriangle
 } from 'lucide-react'
 import { useAgoraVoiceRoom } from '@/hooks/useAgoraVoiceRoom'
 import { endCallAction } from '@/actions/call.actions'
@@ -88,6 +89,18 @@ export default function HostCallRoom({ call, agoraParams }: HostCallRoomProps) {
     }
   }, [call?.id, leaveRoom, router])
 
+  // Dynamic duration auto-drop
+  const durationLimitSeconds = (call?.duration_minutes || 15) * 60
+  const remainingSeconds = Math.max(0, durationLimitSeconds - secondsElapsed)
+  const isNearDrop = isConnected && remainingSeconds <= 15 && remainingSeconds > 0
+
+  useEffect(() => {
+    if (!isConnected) return
+    if (secondsElapsed >= durationLimitSeconds && !isEnding) {
+      handleEndCall()
+    }
+  }, [secondsElapsed, isConnected, durationLimitSeconds, isEnding])
+
   const formatTimer = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60)
     const secs = totalSeconds % 60
@@ -117,6 +130,17 @@ export default function HostCallRoom({ call, agoraParams }: HostCallRoomProps) {
       {/* Background ambient lighting */}
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* 15-Second Grace Warning Banner */}
+      {isNearDrop && (
+        <div className="relative z-20 mb-4 px-4 py-2.5 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-medium flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Session duration expiring. Call will drop gracefully in <strong>{remainingSeconds}s</strong>.</span>
+          </div>
+          <span className="text-[11px] font-bold text-amber-300">Auto-Wrapping Up</span>
+        </div>
+      )}
 
       {/* Top Header */}
       <div className="relative z-10 flex items-center justify-between border-b border-zinc-800/80 pb-6">
