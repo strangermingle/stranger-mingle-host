@@ -572,6 +572,13 @@ export async function updateEventStatusAction(eventId: string, status: string) {
   }).eq('id', eventId)
   if (error) return { error: error.message }
   revalidatePath('/host-dashboard')
+
+  // Non-blocking sync to City Culture
+  try {
+    const { syncEventToCityCulture } = await import('@/lib/sync-cityculture')
+    syncEventToCityCulture(eventId, status === 'cancelled' ? 'cancel' : 'update').catch(() => {})
+  } catch {}
+
   return { success: true }
 }
 
@@ -692,6 +699,14 @@ export async function verifyEventFeePaymentAction(eventId: string, paymentDetail
    if (updateError) return { error: 'Failed to publish event. Please contact support.' }
  
    revalidatePath('/host-dashboard')
+
+   // Non-blocking sync to City Culture
+   try {
+     const { syncEventToCityCulture } = await import('@/lib/sync-cityculture')
+     syncEventToCityCulture(eventId, 'publish').catch((e) => console.error('[CC Sync non-blocking err]:', e))
+   } catch (ccErr) {
+     console.error('[CC Sync dynamic import err]:', ccErr)
+   }
 
    try {
      const { data: eventData } = await adminSupabase.from('events').select('title, host_id').eq('id', eventId).single()
