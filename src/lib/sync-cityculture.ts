@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import crypto from 'crypto'
 
-const SYNC_URL = process.env.CITYCULTURE_SYNC_URL || 'https://api.cityculture.in/api/integrations/channel/sync'
+const SYNC_URL = process.env.CITYCULTURE_SYNC_URL || 'https://api.cityculture.in/api/integrations/strangermingle/sync'
 const SYNC_SECRET = process.env.CITYCULTURE_SYNC_SECRET || 'sm_cc_sync_sec_8a39f1c7d2e45b6890f1'
 
 export async function syncEventToCityCulture(

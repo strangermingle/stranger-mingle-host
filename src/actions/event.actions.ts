@@ -576,7 +576,10 @@ export async function updateEventStatusAction(eventId: string, status: string) {
   // Non-blocking sync to City Culture
   try {
     const { syncEventToCityCulture } = await import('@/lib/sync-cityculture')
-    syncEventToCityCulture(eventId, status === 'cancelled' ? 'cancel' : 'update').catch(() => {})
+    let syncAction: 'publish' | 'update' | 'cancel' = 'update'
+    if (status === 'cancelled') syncAction = 'cancel'
+    else if (status === 'published') syncAction = 'publish'
+    syncEventToCityCulture(eventId, syncAction).catch(() => {})
   } catch {}
 
   return { success: true }
