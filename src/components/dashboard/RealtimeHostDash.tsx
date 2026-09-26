@@ -37,67 +37,54 @@ export function RealtimeHostDash({
   const [activeTab, setActiveTab] = useState<'events' | 'attendees' | 'earnings'>('events')
   const supabase = createClient()
 
-  const refreshData = useCallback(async () => {
-    // 1. Fetch updated events
+  const refreshEvents = useCallback(async () => {
     const { data: updatedEvents } = await supabase
       .from('events')
       .select('id, title, slug, status, start_datetime, booking_count, views_count, likes_count, interests_count')
       .eq('host_id', pageId)
       .order('start_datetime', { ascending: false })
+    if (updatedEvents) setEvents(updatedEvents)
+  }, [pageId, supabase])
 
-    if (updatedEvents) {
-      setEvents(updatedEvents)
-      
-      // 2. Recalculate stats based on updated events
-      const totalBookings = updatedEvents.reduce((acc, curr) => acc + (curr.booking_count || 0), 0)
-      const totalLikes = updatedEvents.reduce((acc, curr) => acc + (curr.likes_count || 0), 0)
-      const totalInterests = updatedEvents.reduce((acc, curr) => acc + (curr.interests_count || 0), 0)
-      
-      setStats(prev => ({
-        ...prev,
-        totalBookings,
-        totalEngagement: totalLikes + totalInterests
-      }))
-    }
-
-    // 3. Fetch attendees
+  const refreshAttendees = useCallback(async () => {
     const { data: updatedAttendees } = await supabase
       .from('bookings')
       .select('id, attendee_name, attendee_email, attendee_phone, booking_ref, status, created_at, event_id, events!inner(title)')
       .eq('events.host_id', pageId)
       .order('created_at', { ascending: false })
-    
-    if (updatedAttendees) {
-      setAttendees(updatedAttendees)
-    }
+    if (updatedAttendees) setAttendees(updatedAttendees)
+  }, [pageId, supabase])
 
-    // 4. Fetch payouts
+  const refreshPayouts = useCallback(async () => {
     const { data: updatedPayouts } = await supabase
       .from('payouts')
       .select('*')
       .eq('host_id', userId)
       .order('created_at', { ascending: false })
-    
-    if (updatedPayouts) {
-      setPayouts(updatedPayouts)
-      const totalEarnings = updatedPayouts.reduce((acc, curr) => acc + (parseFloat(curr.net_amount as unknown as string) || 0), 0)
-      setStats(prev => ({ ...prev, totalEarnings }))
-    }
+    if (updatedPayouts) setPayouts(updatedPayouts)
+  }, [userId, supabase])
 
-    // 5. Fetch host profile for followers
-    const { data: profile } = await supabase
-      .from('host_profiles')
-      .select('follower_count')
-      .eq('user_id', userId)
+  const refreshStats = useCallback(async () => {
+    const { data } = await (supabase as any)
+      .from('host_dashboard_stats')
+      .select('*')
+      .eq('host_id', userId)
       .single()
     
-    if (profile) {
+    if (data) {
       setStats(prev => ({
         ...prev,
-        followers: profile.follower_count || 0
+        totalEarnings: Number(data.total_earnings),
+        totalBookings: data.total_bookings,
+        totalEngagement: data.total_engagement,
+        followers: data.followers
       }))
     }
-  }, [userId, pageId, supabase])
+  }, [userId, supabase])
+
+  useEffect(() => {
+    refreshStats()
+  }, [refreshStats])
 
   useEffect(() => {
     setIsMounted(true)
@@ -107,40 +94,35 @@ export function RealtimeHostDash({
       .channel('host-events-realtime')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'events',
-          filter: `host_id=eq.${userId}`
-        },
-        () => refreshData()
+        { event: '*', schema: 'public', table: 'events', filter: `host_id=eq.${userId}` },
+        () => refreshEvents()
       )
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'host_profiles',
-          filter: `user_id=eq.${userId}`
-        },
-        () => refreshData()
+        { event: '*', schema: 'public', table: 'payouts', filter: `host_id=eq.${userId}` },
+        () => refreshPayouts()
       )
       .on(
         'postgres_changes',
-        {
-           event: '*',
-           schema: 'public',
-           table: 'payouts',
-           filter: `host_id=eq.${userId}`
-        },
-        () => refreshData()
+        { event: '*', schema: 'public', table: 'host_dashboard_stats', filter: `host_id=eq.${userId}` },
+        (payload: any) => {
+          if (payload.new) {
+            setStats(prev => ({
+              ...prev,
+              totalEarnings: Number(payload.new.total_earnings) || prev.totalEarnings,
+              totalBookings: payload.new.total_bookings ?? prev.totalBookings,
+              totalEngagement: payload.new.total_engagement ?? prev.totalEngagement,
+              followers: payload.new.followers ?? prev.followers
+            }))
+          }
+        }
       )
       .subscribe()
 
     return () => {
       supabase.removeChannel(eventsChannel)
     }
-  }, [userId, supabase, refreshData])
+  }, [userId, supabase, refreshEvents, refreshPayouts])
 
   return (
     <div className="space-y-12">
