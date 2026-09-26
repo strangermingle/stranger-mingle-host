@@ -154,8 +154,8 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
     const handleFocus = () => checkForActiveRingingCalls()
     window.addEventListener('focus', handleFocus)
 
-    // Poll every 3 seconds as a resilient fallback
-    const pollInterval = setInterval(checkForActiveRingingCalls, 3000)
+    // Removed the aggressive 3-second polling here. 
+    // We now rely on Supabase Realtime to push updates.
 
     // 2. Supabase Realtime channel for instant push alerts
     const channel = supabase
@@ -203,7 +203,6 @@ export default function IncomingCallAlert({ hostId }: IncomingCallAlertProps) {
 
     return () => {
       window.removeEventListener('focus', handleFocus)
-      clearInterval(pollInterval)
       stopRingtone()
       supabase.removeChannel(channel)
     }
